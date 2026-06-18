@@ -34,10 +34,12 @@ use tower_http::{
 async fn main() {
     tracing_subscriber::fmt::init();
     dotenv().ok();
+    println!("Starting ccdclinic backend...");
 
     let limiter = ConcurrencyLimiter::new(5);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
+    println!("Using PORT={}", port);
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -58,6 +60,7 @@ async fn main() {
         ]);
 
     let db_pool = init_db_pool().await;
+    println!("Database pool initialization step finished.");
     if let Some(db_pool) = db_pool.as_ref() {
         if let Err(err) = ensure_schema(db_pool).await {
             eprintln!("Warning: Failed to initialize database schema: {}", err);
@@ -71,6 +74,7 @@ async fn main() {
 
     let jwt_secret = env::var("JWT_SECRET")
         .unwrap_or_else(|_| "default_secret_key_change_me_in_production".to_string());
+    println!("Building HTTP router...");
     let state = AppState {
         db: db_pool.clone(),
         jwt_secret,
