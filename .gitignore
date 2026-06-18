@@ -1,0 +1,21 @@
+# Rust
+backend/target/
+Cargo.lock
+*.pdb
+*.rlib
+
+# Node/npm
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
