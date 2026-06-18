@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/ccdclinic/',
+  base: '/',
   server: {
     host: 'localhost',
     port: 5174,

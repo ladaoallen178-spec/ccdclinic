@@ -12,7 +12,7 @@ export default function MedicalQRCode() {
   const [generated, setGenerated] = useState(false);
 
   const origin = typeof window !== 'undefined' ? `${window.location.protocol}//${host}` : 'http://localhost:5175';
-  const directLink = `${origin}/ccdclinic/medical-docs?studentId=${encodeURIComponent(patientId.trim())}`;
+  const directLink = `${origin}/medical-docs?studentId=${encodeURIComponent(patientId.trim())}`;
 
   const generate = () => {
     if (!patientId.trim()) {

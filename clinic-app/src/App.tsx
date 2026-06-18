@@ -25,7 +25,7 @@ function RequireAuth() {
 
 function App() {
   return (
-    <BrowserRouter basename="/ccdclinic">
+    <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
 

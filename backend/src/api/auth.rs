@@ -33,7 +33,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
-    pub db: PgPool,
+    pub db: Option<PgPool>,
     pub jwt_secret: String,
 }
 
@@ -122,50 +122,71 @@ pub async fn register(
 
     let user_id = Uuid::new_v4();
     let role = payload.role.unwrap_or_else(|| "Nurse".to_string());
-    let result = sqlx::query(
-        r#"INSERT INTO users (id, email, full_name, role, password_hash, contact_number, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, now())"#,
-    )
-    .bind(user_id)
-    .bind(&email)
-    .bind(&full_name)
-    .bind(&role)
-    .bind(&password_hash)
-    .bind(&contact_number)
-    .execute(&state.db)
-    .await;
-
-    match result {
-        Ok(_) => match create_token(&state.jwt_secret, user_id, &email).await {
-            Ok(token) => {
-                let response = AuthResponse {
-                    token,
-                    user: UserResponse {
-                        id: user_id,
-                        email: email.clone(),
-                        fullname: full_name.clone(),
-                        role: role.clone(),
-                    },
-                };
-                (StatusCode::CREATED, Json(response)).into_response()
-            }
-            Err(_) => error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to generate auth token.",
-            ),
-        },
-        Err(err) => {
-            if let Some(db_err) = err.as_database_error() {
-                let message = db_err.message();
-                if message.contains("unique") || message.contains("duplicate") {
-                    return error_response(StatusCode::CONFLICT, "Email already exists.");
-                }
-            }
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Unable to register user.",
+    let local_result = match state.db.as_ref() {
+        Some(db) => Some(
+            sqlx::query(
+                r#"INSERT INTO users (id, email, full_name, role, password_hash, contact_number, created_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, now())"#,
             )
+            .bind(user_id)
+            .bind(&email)
+            .bind(&full_name)
+            .bind(&role)
+            .bind(&password_hash)
+            .bind(&contact_number)
+            .execute(db)
+            .await,
+        ),
+        None => None,
+    };
+
+    if let Some(Err(err)) = local_result.as_ref() {
+        if let Some(db_err) = err.as_database_error() {
+            let message = db_err.message();
+            if message.contains("unique") || message.contains("duplicate") {
+                return error_response(StatusCode::CONFLICT, "Email already exists.");
+            }
         }
+        warn!(email = %email, error = %err, "Local registration failed; trying Supabase REST fallback");
+    }
+
+    if !matches!(local_result, Some(Ok(_))) {
+        if let Err(err) = create_user_in_supabase(
+            user_id,
+            &email,
+            full_name.as_deref(),
+            &role,
+            &password_hash,
+            contact_number.as_deref(),
+        )
+        .await
+        {
+            let message = err.to_string();
+            if message.contains("409") || message.to_lowercase().contains("duplicate") {
+                return error_response(StatusCode::CONFLICT, "Email already exists.");
+            }
+            warn!(email = %email, error = %err, "Supabase REST registration failed");
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to register user.");
+        }
+    }
+
+    match create_token(&state.jwt_secret, user_id, &email).await {
+        Ok(token) => {
+            let response = AuthResponse {
+                token,
+                user: UserResponse {
+                    id: user_id,
+                    email: email.clone(),
+                    fullname: full_name.clone(),
+                    role: role.clone(),
+                },
+            };
+            (StatusCode::CREATED, Json(response)).into_response()
+        }
+        Err(_) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to generate auth token.",
+        ),
     }
 }
 
@@ -182,34 +203,19 @@ pub async fn login(
         return error_response(StatusCode::BAD_REQUEST, "Email and password are required.");
     }
 
-    let row = match fetch_user_by_email(&state.db, &email).await {
-        Ok(Some(row)) => row,
-        Ok(None) => match fetch_user_by_email_from_supabase(&email).await {
-            Ok(Some(row)) => {
-                info!(email = %email, "Login succeeded via Supabase fallback. Caching user locally.");
-                if let Err(err) = cache_remote_user_locally(&state.db, &row).await {
-                    warn!(email = %email, error = %err, "Unable to cache Supabase user locally");
+    let row = match state.db.as_ref() {
+        Some(db) => match fetch_user_by_email(db, &email).await {
+            Ok(Some(row)) => row,
+            Ok(None) => match fetch_user_by_email_from_supabase(&email).await {
+                Ok(Some(row)) => {
+                    info!(email = %email, "Login succeeded via Supabase fallback. Caching user locally.");
+                    if let Err(err) = cache_remote_user_locally(db, &row).await {
+                        warn!(email = %email, error = %err, "Unable to cache Supabase user locally");
+                    }
+                    row
                 }
-                row
-            }
-            Ok(None) => {
-                info!(email = %email, "Login failed: user not found locally or in Supabase fallback");
-                return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
-            }
-            Err(rest_err) => {
-                info!(email = %email, error = %rest_err, "Login failed: Supabase REST fallback error");
-                return error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Unable to query user.",
-                );
-            }
-        },
-        Err(err) => {
-            info!(email = %email, error = %err, "Login failed: DB query error");
-            match fetch_user_by_email_from_supabase(&email).await {
-                Ok(Some(row)) => row,
                 Ok(None) => {
-                    info!(email = %email, "Login failed: user not found in Supabase REST fallback");
+                    info!(email = %email, "Login failed: user not found locally or in Supabase fallback");
                     return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
                 }
                 Err(rest_err) => {
@@ -219,8 +225,36 @@ pub async fn login(
                         "Unable to query user.",
                     );
                 }
+            },
+            Err(err) => {
+                info!(email = %email, error = %err, "Login failed: DB query error");
+                match fetch_user_by_email_from_supabase(&email).await {
+                    Ok(Some(row)) => row,
+                    Ok(None) => {
+                        info!(email = %email, "Login failed: user not found in Supabase REST fallback");
+                        return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
+                    }
+                    Err(rest_err) => {
+                        info!(email = %email, error = %rest_err, "Login failed: Supabase REST fallback error");
+                        return error_response(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            "Unable to query user.",
+                        );
+                    }
+                }
             }
-        }
+        },
+        None => match fetch_user_by_email_from_supabase(&email).await {
+            Ok(Some(row)) => row,
+            Ok(None) => {
+                info!(email = %email, "Login failed: user not found in Supabase REST fallback");
+                return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
+            }
+            Err(rest_err) => {
+                info!(email = %email, error = %rest_err, "Login failed: Supabase REST fallback error");
+                return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to query user.");
+            }
+        },
     };
 
     let needs_rehash = match verify_password(password, &row.password_hash) {
@@ -235,17 +269,28 @@ pub async fn login(
     if needs_rehash {
         match hash_password(password) {
             Ok(password_hash) => {
-                if let Err(err) =
-                    sqlx::query(r#"UPDATE users SET password_hash = $1 WHERE id = $2"#)
+                let local_update = match state.db.as_ref() {
+                    Some(db) => Some(
+                        sqlx::query(r#"UPDATE users SET password_hash = $1 WHERE id = $2"#)
                         .bind(&password_hash)
                         .bind(row.id)
-                        .execute(&state.db)
-                        .await
-                {
-                    warn!(email = %email, error = %err, "Unable to upgrade plaintext password hash");
-                    if let Err(rest_err) =
-                        update_password_hash_in_supabase(row.id, &password_hash).await
-                    {
+                        .execute(db)
+                        .await,
+                    ),
+                    None => None,
+                };
+
+                let should_update_supabase = match local_update {
+                    Some(Ok(_)) => false,
+                    Some(Err(err)) => {
+                        warn!(email = %email, error = %err, "Unable to upgrade plaintext password hash");
+                        true
+                    }
+                    None => true,
+                };
+
+                if should_update_supabase {
+                    if let Err(rest_err) = update_password_hash_in_supabase(row.id, &password_hash).await {
                         warn!(email = %email, error = %rest_err, "Unable to upgrade plaintext password hash via Supabase REST fallback");
                     }
                 }
@@ -337,6 +382,42 @@ async fn fetch_user_by_email_from_supabase(email: &str) -> anyhow::Result<Option
 
     let mut users = response.json::<Vec<UserRecord>>().await?;
     Ok(users.pop())
+}
+
+async fn create_user_in_supabase(
+    user_id: Uuid,
+    email: &str,
+    full_name: Option<&str>,
+    role: &str,
+    password_hash: &str,
+    contact_number: Option<&str>,
+) -> anyhow::Result<()> {
+    let supabase_url = env::var("SUPABASE_URL")?;
+    let service_key = env::var("SUPABASE_SERVICE_ROLE_KEY")?;
+    let url = format!("{}/rest/v1/users", supabase_url.trim_end_matches('/'));
+
+    let response = reqwest::Client::new()
+        .post(url)
+        .header("apikey", &service_key)
+        .bearer_auth(&service_key)
+        .header("Prefer", "return=minimal")
+        .json(&json!({
+            "id": user_id,
+            "email": email,
+            "full_name": full_name,
+            "role": role,
+            "password_hash": password_hash,
+            "contact_number": contact_number,
+        }))
+        .send()
+        .await?;
+
+    let status = response.status();
+    if !status.is_success() {
+        return Err(anyhow::anyhow!("Supabase REST returned {}", status));
+    }
+
+    Ok(())
 }
 
 async fn cache_remote_user_locally(db: &PgPool, user: &UserRecord) -> Result<(), sqlx::Error> {

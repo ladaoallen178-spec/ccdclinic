@@ -1,5 +1,5 @@
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:8001');
-const APP_BASE_URL = '/ccdclinic';
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '/api');
+const APP_BASE_URL = '';
 const REQUEST_TIMEOUT_MS = 5000;
 
 interface ApiResponse<T> {

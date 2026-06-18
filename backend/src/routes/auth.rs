@@ -23,16 +23,23 @@ async fn storage_test(State(_state): State<crate::api::auth::AppState>) -> Json<
 }
 
 async fn health_check(State(state): State<crate::api::auth::AppState>) -> Json<serde_json::Value> {
-    match sqlx::query("SELECT 1 as test").fetch_one(&state.db).await {
-        Ok(_) => Json(json!({
+    match state.db.as_ref() {
+        Some(db) => match sqlx::query("SELECT 1 as test").fetch_one(db).await {
+            Ok(_) => Json(json!({
+                "status": "ok",
+                "database": "connected",
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            })),
+            Err(e) => Json(json!({
+                "status": "ok",
+                "database": "disconnected",
+                "error": e.to_string(),
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            })),
+        },
+        None => Json(json!({
             "status": "ok",
-            "database": "connected",
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        })),
-        Err(e) => Json(json!({
-            "status": "error",
-            "database": "disconnected",
-            "error": e.to_string(),
+            "database": "not_configured",
             "timestamp": chrono::Utc::now().to_rfc3339()
         })),
     }

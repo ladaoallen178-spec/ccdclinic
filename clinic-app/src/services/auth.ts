@@ -43,7 +43,7 @@ export const login = async (email: string, password: string): Promise<LoginRespo
   }
 };
 
-const LOGIN_REDIRECT = '/ccdclinic/login';
+const LOGIN_REDIRECT = '/login';
 
 export const logout = () => {
   localStorage.removeItem('token');

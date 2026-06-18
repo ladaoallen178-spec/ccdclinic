@@ -9,9 +9,11 @@ pub mod supabase;
 use axum::{
     http::Method,
     middleware::{self},
-    Extension,
+    routing::get,
+    Json, Router,
 };
 use dotenvy::dotenv;
+use serde_json::json;
 use std::env;
 
 use db::init_db_pool;
@@ -21,7 +23,12 @@ use routes::{
     clinic::clinic_routes,
 };
 use schema::ensure_schema;
-use tower_http::{cors::{Any, CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    services::{ServeDir, ServeFile},
+    set_header::SetResponseHeaderLayer,
+    trace::TraceLayer,
+};
 
 #[tokio::main]
 async fn main() {
@@ -51,11 +58,15 @@ async fn main() {
         ]);
 
     let db_pool = init_db_pool().await;
-    if let Err(err) = ensure_schema(&db_pool).await {
-        eprintln!("Warning: Failed to initialize database schema: {}", err);
-        eprintln!("Continuing startup; some features may be degraded. Using Supabase REST fallback where available.");
-        // Do not exit here — allow the server to start so the Supabase REST fallback
-        // in the auth handlers can still be used when the local DB is unavailable.
+    if let Some(db_pool) = db_pool.as_ref() {
+        if let Err(err) = ensure_schema(db_pool).await {
+            eprintln!("Warning: Failed to initialize database schema: {}", err);
+            eprintln!("Continuing startup; some features may be degraded. Using Supabase REST fallback where available.");
+            // Do not exit here; allow the server to start so the Supabase REST fallback
+            // in the auth handlers can still be used when the local DB is unavailable.
+        }
+    } else {
+        eprintln!("Skipping schema initialization because DATABASE_URL is unavailable.");
     }
 
     let jwt_secret = env::var("JWT_SECRET")
@@ -65,10 +76,20 @@ async fn main() {
         jwt_secret,
     };
 
-    let app = auth_routes()
-        .merge(clinic_routes())
+    let api = auth_routes().merge(clinic_routes());
+    let app = Router::new()
+        .route(
+            "/health",
+            get(|| async {
+                Json(json!({
+                    "status": "ok",
+                    "service": "ccdclinic",
+                    "timestamp": chrono::Utc::now().to_rfc3339()
+                }))
+            }),
+        )
+        .nest("/api", api)
         .with_state(state)
-        .layer(Extension(db_pool))
         // .route_layer(middleware::from_fn_with_state(
         //     allowed_origin.clone()
         // ))
@@ -80,7 +101,10 @@ async fn main() {
             axum::http::header::STRICT_TRANSPORT_SECURITY,
             axum::http::HeaderValue::from_static("max-age=31536000; includeSubDomains"),
         ))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .fallback_service(
+            ServeDir::new("public").not_found_service(ServeFile::new("public/index.html")),
+        );
 
     let addr = format!("0.0.0.0:{}", port);
     let listener = match tokio::net::TcpListener::bind(&addr).await {
