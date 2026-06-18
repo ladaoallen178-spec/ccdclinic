@@ -1,2 +1,4 @@
-1.71.0
+# Use TOML format so both local `cargo` and render parse the toolchain correctly
+[toolchain]
+channel = "1.71.0"
 
