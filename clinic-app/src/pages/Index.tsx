@@ -9,7 +9,7 @@ function Index() {
         <p>Record visits, monitor clinic activity, and keep common health concerns organized.</p>
         <div className="actions">
           <Link to="/login">Nurse Login</Link>
-          <Link to="/student-entry">Student Entry</Link>
+          <Link to="/students">Student Entry</Link>
         </div>
       </section>
     </main>

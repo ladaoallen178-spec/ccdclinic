@@ -12,6 +12,7 @@ export type StudentRecord = {
   program?: string;
   parentName?: string;
   parentPhone?: string;
+  createdAt?: string;
 };
 
 export type StaffRecord = {
@@ -26,6 +27,15 @@ export type StaffRecord = {
   position?: string;
   contactNumber?: string;
   email?: string;
+};
+
+export type NurseRecord = {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Nurse' | 'Head Nurse' | 'Administrator';
+  contactNumber: string;
+  createdAt: string;
 };
 
 export type VisitRecord = {
@@ -172,6 +182,8 @@ const defaultStaff: StaffRecord[] = [
   },
 ];
 
+const defaultNurses: NurseRecord[] = [];
+
 const defaultVisits: VisitRecord[] = [
   {
     patientType: 'Student',
@@ -256,6 +268,15 @@ export function getStaff() {
 
 export function saveStaff(staff: StaffRecord[]) {
   localStorage.setItem('clinic-staff', JSON.stringify(staff));
+  notifyClinicDataChanged();
+}
+
+export function getNurses() {
+  return readStorage('clinic-nurses', defaultNurses);
+}
+
+export function saveNurses(nurses: NurseRecord[]) {
+  localStorage.setItem('clinic-nurses', JSON.stringify(nurses));
   notifyClinicDataChanged();
 }
 

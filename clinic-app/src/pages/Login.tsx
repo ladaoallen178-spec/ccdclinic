@@ -1,14 +1,29 @@
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import { CalendarCheck, FileText, Lock, Mail, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { login as loginUser } from '../services/auth';
 
 function Login() {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    localStorage.setItem('token', 'demo-clinic-session');
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get('email') || '').trim();
+    const password = String(formData.get('password') || '');
+
+    setIsSubmitting(true);
+    const result = await loginUser(email, password);
+    setIsSubmitting(false);
+
+    if (!result.success) {
+      toast.error(result.message || 'Invalid email or password.');
+      return;
+    }
+
     toast.success('Logged in');
     navigate('/dashboard', { replace: true });
   };
@@ -40,9 +55,9 @@ function Login() {
             <input type="password" name="password" required />
           </label>
 
-          <button className="login-button" type="submit">
+          <button className="login-button" type="submit" disabled={isSubmitting}>
             <Lock size={16} />
-            Login to Dashboard
+            {isSubmitting ? 'Checking account...' : 'Login to Dashboard'}
           </button>
         </form>
 

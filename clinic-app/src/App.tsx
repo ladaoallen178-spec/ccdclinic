@@ -1,60 +1,58 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import Layout from './Layout/Layout';
-import Login from './pages/Login';
-import NurseDashboard from './pages/NurseDashboard';
-import StudentEntry from './pages/StudentEntry';
-import StaffEntry from './pages/StaffEntry';
-import Index from './pages/Index';
-import {
-  AddNewVisit,
-  BmiCalculator,
-  Inventory,
-  MasterList,
-  MedicalDocs,
-  MedicalQR,
-  MonthlyReport,
-  RegisterNurse,
-} from './pages/ClinicPages';
+﻿import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import Layout from "./Layout/Layout";
+import Login from "./pages/Login";
+import NurseDashboard from "./pages/NurseDashboard";
+import AddNewVisit from "./pages/AddNewVisit";
+import Students from "./pages/Students";
+import StudentsList from "./pages/StudentsList";
+import Staff from "./pages/Staff";
+import BmiCalculator from "./pages/BmiCalculator";
+import MedicalDocuments from "./pages/MedicalDocuments";
+import MedicalQRCode from "./pages/MedicalQRCode";
+import Inventory from "./pages/Inventory";
+import MasterList from "./pages/MasterList";
+import MonthlyReport from "./pages/MonthlyReport";
+import RegisterNurse from "./pages/RegisterNurse";
+import { isAuthenticated } from "./services/auth";
 
-// Protected Route wrapper
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) {
+function RequireAuth() {
+  if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
-  return <>{children}</>;
-};
+
+  return <Layout />;
+}
 
 function App() {
   return (
-    <Router>
-      <Toaster position="top-right" />
+    <BrowserRouter basename="/ccdclinic">
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/index" element={<Index />} />
-        
-        <Route element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }>
-          <Route path="/dashboard" element={<NurseDashboard />} />
-          <Route path="/add-visit" element={<AddNewVisit />} />
-          <Route path="/student-entry" element={<StudentEntry />} />
-          <Route path="/staff-entry" element={<StaffEntry />} />
-          <Route path="/bmi-calculator" element={<BmiCalculator />} />
-          <Route path="/medical-docs" element={<MedicalDocs />} />
-          <Route path="/medical-qr" element={<MedicalQR />} />
-          <Route path="/master-list" element={<MasterList />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/register-nurse" element={<RegisterNurse />} />
-          <Route path="/monthly-report" element={<MonthlyReport />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        <Route path="/" element={<RequireAuth />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<NurseDashboard />} />
+          <Route path="add-visit" element={<AddNewVisit />} />
+          <Route path="students" element={<StudentsList />} />
+          <Route path="student-entry" element={<Students />} />
+          <Route path="student-list" element={<StudentsList />} />
+          <Route path="staff" element={<Staff />} />
+          <Route path="staff-entry" element={<Staff />} />
+          <Route path="bmi" element={<BmiCalculator />} />
+          {/* legacy/alternate paths: redirect to current routes */}
+          <Route path="bmi-calculator" element={<Navigate to="bmi" replace />} />
+          <Route path="medical-docs" element={<MedicalDocuments />} />
+          <Route path="qr-code" element={<MedicalQRCode />} />
+          <Route path="medical-qr" element={<Navigate to="qr-code" replace />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="master-list" element={<MasterList />} />
+          <Route path="register-nurse" element={<RegisterNurse />} />
+          <Route path="monthly-report" element={<MonthlyReport />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 

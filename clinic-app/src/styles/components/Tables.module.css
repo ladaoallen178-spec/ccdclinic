@@ -1,0 +1,101 @@
+.tableContainer {
+  overflow-x: auto;
+  background: var(--white);
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray);
+}
+
+.dataTable th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.dataTable tr:hover {
+  background: #f5f5f5;
+}
+
+.searchBox {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 15px;
+  border: 1px solid var(--gray);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  transition: var(--transition);
+}
+
+.searchBox:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(45, 80, 22, 0.1);
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.badgeUnderweight { background: #ffc107; color: #856404; }
+.badgeNormal { background: var(--success); color: white; }
+.badgeOverweight { background: #fd7e14; color: white; }
+.badgeObese { background: var(--danger); color: white; }
+.badgePending { background: var(--warning); color: var(--dark); }
+.badgeConfirmed { background: var(--success); color: white; }
+.badgeLowStock { background: var(--danger); color: white; }
+.badgeInStock { background: var(--success); color: white; }
+
+.actionLink {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.actionLink:hover {
+  text-decoration: underline;
+}
+
+.btnPrint {
+  background: var(--info);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 5px;
+  text-decoration: none;
+  font-size: 12px;
+  display: inline-block;
+  transition: var(--transition);
+}
+
+.btnPrint:hover {
+  background: #138496;
+}
+
+@media (max-width: 768px) {
+  .tableContainer {
+    padding: 15px;
+  }
+  
+  .dataTable th,
+  .dataTable td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

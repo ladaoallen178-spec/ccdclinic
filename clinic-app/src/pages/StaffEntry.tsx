@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Briefcase,
@@ -16,8 +16,9 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getStaff, getVisits, saveStaff as persistStaff, saveVisits as persistVisits } from '../utils/clinicData';
+import { getStaff, getVisits } from '../utils/clinicData';
 import type { StaffRecord, VisitRecord } from '../utils/clinicData';
+import { createVisitRecord, deleteStaffRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
 
 type StaffTab = 'pending' | 'today' | 'recent' | 'manage';
 
@@ -34,6 +35,25 @@ function StaffEntry() {
   const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
   const [searchTerm, setSearchTerm] = useState('');
   const [historyStaffId, setHistoryStaffId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([loadStaff(), loadVisits()])
+      .then(([nextStaff, nextVisits]) => {
+        if (!isMounted) return;
+        setStaffList(nextStaff);
+        setVisits(nextVisits);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        // This should rarely happen now due to fallback logic
+        toast.error('Unable to load staff records. Using cached data if available.');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const pendingStaff = useMemo(() => staffList.filter((staff) => staff.status === 'Pending'), [staffList]);
   const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'Staff'), [visits]);
@@ -54,18 +74,9 @@ function StaffEntry() {
   }, [searchTerm, staffList]);
   const historyStaff = staffList.find((staff) => staff.id === historyStaffId) ?? null;
 
-  const updateStaff = (nextStaff: StaffRecord[]) => {
-    setStaffList(nextStaff);
-    persistStaff(nextStaff);
-  };
-
-  const updateVisits = (nextVisits: VisitRecord[]) => {
-    setVisits(nextVisits);
-    persistVisits(nextVisits);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const target = event.currentTarget;
     const form = new FormData(event.currentTarget);
     const id = String(form.get('id')).trim();
 
@@ -88,12 +99,17 @@ function StaffEntry() {
       status: 'Cleared',
     };
 
-    updateStaff([staff, ...staffList]);
-    event.currentTarget.reset();
-    toast.success('Staff member added');
+    try {
+      const saved = await saveStaffRecord(staff);
+      setStaffList([saved, ...staffList]);
+      target.reset();
+      toast.success('Staff member added');
+    } catch {
+      toast.error('Staff member was not saved to the database.');
+    }
   };
 
-  const confirmStaff = (staff: StaffRecord) => {
+  const confirmStaff = async (staff: StaffRecord) => {
     const visit: VisitRecord = {
       patientType: 'Staff',
       idNumber: staff.id,
@@ -107,14 +123,25 @@ function StaffEntry() {
       createdAt: new Date().toISOString(),
     };
 
-    updateStaff(staffList.map((item) => (item.id === staff.id ? { ...item, status: 'Cleared' } : item)));
-    updateVisits([visit, ...visits]);
-    toast.success('Staff visit confirmed');
+    try {
+      const savedStaff = await saveStaffRecord({ ...staff, status: 'Cleared' });
+      const savedVisit = await createVisitRecord(visit);
+      setStaffList(staffList.map((item) => (item.id === staff.id ? savedStaff : item)));
+      setVisits([savedVisit, ...visits]);
+      toast.success('Staff visit confirmed');
+    } catch {
+      toast.error('Staff visit was not saved to the database.');
+    }
   };
 
-  const rejectStaff = (id: string) => {
-    updateStaff(staffList.filter((staff) => staff.id !== id));
-    toast.success('Pending request removed');
+  const rejectStaff = async (id: string) => {
+    try {
+      await deleteStaffRecord(id);
+      setStaffList(staffList.filter((staff) => staff.id !== id));
+      toast.success('Pending request removed');
+    } catch {
+      toast.error('Staff record was not removed from the database.');
+    }
   };
 
   const printReceipt = (visit: VisitRecord) => {

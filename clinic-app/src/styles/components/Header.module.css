@@ -1,0 +1,146 @@
+.header {
+  background: var(--white);
+  border-radius: 15px;
+  padding: 15px 25px;
+  margin-bottom: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: var(--card-shadow);
+}
+
+.pageTitle {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboardLogo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(26, 71, 42, 0.15);
+  background: #fff;
+}
+
+.logoTextGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.logoTextGroup h2 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--primary);
+}
+
+.logoSubtitle {
+  font-size: 12px;
+  color: var(--secondary);
+  letter-spacing: 0.4px;
+}
+
+.pageTitle h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.menuBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: var(--transition);
+  color: var(--primary);
+}
+
+.menuBtn:hover {
+  background: var(--gray-light);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.datetimeContainer {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  padding: 8px 20px;
+  border-radius: 12px;
+  text-align: right;
+}
+
+.currentDate {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.currentTime {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.userName {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 14px;
+}
+
+.roleBadge {
+  background: #e8f5e9;
+  color: var(--primary);
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.userAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .pageTitle {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .userInfo {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .datetimeContainer {
+    text-align: center;
+  }
+}

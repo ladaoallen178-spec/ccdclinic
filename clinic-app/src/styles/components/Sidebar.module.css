@@ -1,0 +1,172 @@
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 280px;
+  height: 100%;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  transition: var(--transition);
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.sidebarCollapsed {
+  width: 70px;
+}
+
+.sidebarHeader {
+  padding: 25px 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logoContainer {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--accent);
+}
+
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5d742, #e6c422);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoPlaceholder i {
+  font-size: 40px;
+  color: var(--primary-dark);
+}
+
+.sidebarTitle {
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.sidebarSubtitle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.navMenu {
+  list-style: none;
+  padding: 20px 0;
+}
+
+.navItem {
+  margin-bottom: 5px;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  transition: var(--transition);
+  gap: 12px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.navLink:hover {
+  background: var(--sidebar-hover);
+  color: white;
+  border-left-color: var(--accent);
+  transform: translateX(5px);
+}
+
+.navLinkActive {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-left-color: var(--accent);
+}
+
+.navIcon {
+  width: 24px;
+  font-size: 18px;
+}
+
+.navText {
+  flex: 1;
+}
+
+.badge {
+  background: var(--danger);
+  color: white;
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.sidebarFooter {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.logoutLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.logoutLink:hover {
+  background: var(--danger);
+  transform: translateX(5px);
+}
+
+@media (max-width: 992px) {
+  .sidebar {
+    width: 70px;
+  }
+  
+  .sidebarHeader h3,
+  .sidebarHeader p,
+  .navText {
+    display: none;
+  }
+  
+  .logoContainer,
+  .logoPlaceholder {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .navLink {
+    justify-content: center;
+    padding: 12px;
+  }
+  
+  .navIcon {
+    margin-right: 0;
+  }
+  
+  .logoutLink span {
+    display: none;
+  }
+  
+  .logoutLink {
+    justify-content: center;
+  }
+}

@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -17,10 +17,9 @@ import toast from 'react-hot-toast';
 import {
   getStudents,
   getVisits,
-  saveStudents as persistStudents,
-  saveVisits as persistVisits,
 } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
+import { createVisitRecord, deleteStudentRecord, loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
 
 type StudentTab = 'pending' | 'today' | 'recent' | 'manage';
 
@@ -37,6 +36,21 @@ function StudentEntry() {
   const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
   const [searchTerm, setSearchTerm] = useState('');
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([loadStudents(), loadVisits()])
+      .then(([nextStudents, nextVisits]) => {
+        if (!isMounted) return;
+        setStudents(nextStudents);
+        setVisits(nextVisits);
+      })
+      .catch(() => toast.error('Unable to load student records from the database.'));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const pendingStudents = useMemo(() => students.filter((student) => student.status === 'Pending'), [students]);
   const studentVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'Student'), [visits]);
@@ -57,18 +71,9 @@ function StudentEntry() {
   }, [searchTerm, students]);
   const historyStudent = students.find((student) => student.id === historyStudentId) ?? null;
 
-  const updateStudents = (nextStudents: StudentRecord[]) => {
-    setStudents(nextStudents);
-    persistStudents(nextStudents);
-  };
-
-  const updateVisits = (nextVisits: VisitRecord[]) => {
-    setVisits(nextVisits);
-    persistVisits(nextVisits);
-  };
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const target = event.currentTarget;
     const form = new FormData(event.currentTarget);
     const id = String(form.get('id')).trim();
     const yearLevel = String(form.get('yearLevel')).trim();
@@ -93,12 +98,17 @@ function StudentEntry() {
       status: 'Cleared',
     };
 
-    updateStudents([student, ...students]);
-    event.currentTarget.reset();
-    toast.success('Student added');
+    try {
+      const saved = await saveStudentRecord(student);
+      setStudents([saved, ...students]);
+      target.reset();
+      toast.success('Student added');
+    } catch {
+      toast.error('Student was not saved to the database.');
+    }
   };
 
-  const confirmStudent = (student: StudentRecord) => {
+  const confirmStudent = async (student: StudentRecord) => {
     const visit: VisitRecord = {
       patientType: 'Student',
       idNumber: student.id,
@@ -113,14 +123,25 @@ function StudentEntry() {
       createdAt: new Date().toISOString(),
     };
 
-    updateStudents(students.map((item) => (item.id === student.id ? { ...item, status: 'Cleared' } : item)));
-    updateVisits([visit, ...visits]);
-    toast.success('Student visit confirmed');
+    try {
+      const savedStudent = await saveStudentRecord({ ...student, status: 'Cleared' });
+      const savedVisit = await createVisitRecord(visit);
+      setStudents(students.map((item) => (item.id === student.id ? savedStudent : item)));
+      setVisits([savedVisit, ...visits]);
+      toast.success('Student visit confirmed');
+    } catch {
+      toast.error('Student visit was not saved to the database.');
+    }
   };
 
-  const rejectStudent = (id: string) => {
-    updateStudents(students.filter((student) => student.id !== id));
-    toast.success('Pending request removed');
+  const rejectStudent = async (id: string) => {
+    try {
+      await deleteStudentRecord(id);
+      setStudents(students.filter((student) => student.id !== id));
+      toast.success('Pending request removed');
+    } catch {
+      toast.error('Student record was not removed from the database.');
+    }
   };
 
   const printReceipt = (visit: VisitRecord) => {

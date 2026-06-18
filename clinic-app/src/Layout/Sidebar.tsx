@@ -10,12 +10,12 @@ import {
   PlusCircle,
   QrCode,
   UserPlus,
-  UserRound,
-  UsersRound,
+  Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
+import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
 
 function Sidebar() {
   const navigate = useNavigate();
@@ -23,6 +23,9 @@ function Sidebar() {
 
   useEffect(() => {
     const refreshStats = () => setClinicStats(getClinicStats());
+    Promise.all([loadStudents(), loadStaff(), loadVisits(), loadInventory()])
+      .then(refreshStats)
+      .catch(() => undefined);
     window.addEventListener('clinic-data-changed', refreshStats);
     window.addEventListener('storage', refreshStats);
     return () => {
@@ -34,8 +37,8 @@ function Sidebar() {
   const links = [
     { to: '/dashboard', label: 'Dashboard', icon: Home },
     { to: '/add-visit', label: 'Add New Visit', icon: PlusCircle },
-    { to: '/student-entry', label: 'Students', icon: UserRound, badge: String(clinicStats.studentPending) },
-    { to: '/staff-entry', label: 'Staff', icon: UsersRound, badge: String(clinicStats.staffPending) },
+    { to: '/student-entry', label: 'Students', icon: Users, badge: String(clinicStats.studentPending) },
+    { to: '/staff-entry', label: 'Staff', icon: Users, badge: String(clinicStats.staffPending) },
     { to: '/bmi-calculator', label: 'BMI Calculator', icon: Calculator },
     { to: '/medical-docs', label: 'Medical Docs', icon: FolderOpen },
     { to: '/medical-qr', label: 'Medical QR', icon: QrCode },
@@ -47,6 +50,7 @@ function Sidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login', { replace: true });
   };
 
@@ -75,3 +79,4 @@ function Sidebar() {
 }
 
 export default Sidebar;
+

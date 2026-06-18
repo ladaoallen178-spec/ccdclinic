@@ -1,0 +1,32 @@
+﻿services:
+  # Run Service
+  db:
+    image: postgres:16-alpine
+    container_name: backend_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: backend
+    ports:
+      - "5433:5432"
+    volumes:
+      - backend_db_data:/var/lib/postgresql/data
+
+  # Run Service
+  api:
+    build:
+      .
+    container_name: backend_api
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/myengine
+      CLIENT_URL: http://localhost:5173
+      # Optional. Leave empty unless you want backend to prefix relative media paths.
+    ports:
+      - "8000:8000"
+
+volumes:
+  backend_db_data:

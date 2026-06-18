@@ -8,12 +8,16 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getClinicStats } from '../utils/clinicData';
+import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
 
 function NurseDashboard() {
   const [clinicStats, setClinicStats] = useState(getClinicStats);
 
   useEffect(() => {
     const refreshStats = () => setClinicStats(getClinicStats());
+    Promise.all([loadStudents(), loadStaff(), loadVisits(), loadInventory()])
+      .then(refreshStats)
+      .catch(() => undefined);
     window.addEventListener('clinic-data-changed', refreshStats);
     window.addEventListener('storage', refreshStats);
     return () => {

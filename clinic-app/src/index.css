@@ -30,6 +30,16 @@ a {
   cursor: pointer;
 }
 
+button,
+a,
+input,
+select,
+textarea,
+label {
+  position: relative;
+  z-index: 1;
+}
+
 #root {
   min-height: 100vh;
 }
@@ -512,6 +522,132 @@ th {
   overflow-wrap: anywhere;
 }
 
+.medical-qr-page {
+  display: grid;
+  gap: 24px;
+  width: min(1180px, 100%);
+  margin-inline: auto;
+}
+
+.medical-qr-header {
+  display: grid;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: #f8faf7;
+}
+
+.medical-qr-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.medical-qr-header span {
+  color: #475467;
+}
+
+.medical-qr-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.medical-qr-card,
+.medical-qr-preview {
+  display: grid;
+  gap: 18px;
+}
+
+.medical-qr-card h2,
+.medical-qr-preview h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #05351b;
+}
+
+.medical-qr-link {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid #d8e1e8;
+  background: #ffffff;
+}
+
+.medical-qr-link strong {
+  color: #0f5132;
+  word-break: break-all;
+}
+
+.medical-qr-notice {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #ecf6ea;
+  color: #1e4e2c;
+}
+
+.medical-qr-notice ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.medical-qr-card-body {
+  display: grid;
+  gap: 18px;
+}
+
+.medical-qr-card-body label {
+  display: grid;
+  gap: 8px;
+  color: #172033;
+  font-weight: 800;
+}
+
+.medical-qr-card-body input {
+  width: 100%;
+}
+
+.medical-qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.medical-qr-actions button {
+  min-height: 42px;
+}
+
+.medical-qr-instructions {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #f2f7f1;
+}
+
+.medical-qr-instructions h3 {
+  margin: 0;
+  color: #0f5132;
+}
+
+.medical-qr-instructions ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.medical-qr-preview {
+  display: grid;
+  gap: 18px;
+}
+
+.medical-qr-preview button {
+  width: 100%;
+}
+
 .result-panel span,
 .inventory-panel p {
   color: #667085;
@@ -639,17 +775,110 @@ th {
   background: rgba(255, 255, 255, 0.14);
 }
 
-.bmi-result-box strong {
+.master-list-banner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 32px;
+  background: linear-gradient(135deg, #0f5c27 0%, #23a55d 100%);
   color: #ffffff;
-  font-size: 1.65rem;
 }
 
-.bmi-student-card,
-.bmi-info-card,
-.bmi-records-card {
+.master-list-banner strong {
+  font-size: 1.4rem;
+}
+
+.master-list-banner span {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.master-list-summary {
   display: grid;
-  align-content: start;
-  gap: 22px;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 18px;
+}
+
+.summary-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 18px;
+  background: #f6fbf5;
+}
+
+.summary-card strong {
+  color: #05351b;
+  font-size: 2rem;
+}
+
+.summary-card span {
+  color: #4b5563;
+}
+
+.master-list-controls {
+  display: grid;
+  gap: 18px;
+}
+
+.master-list-controls .control-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.master-list-controls label {
+  display: grid;
+  gap: 8px;
+}
+
+.master-list-controls select,
+.master-list-controls input {
+  width: 100%;
+}
+
+.master-list-controls .search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.master-list-controls .search-field svg {
+  color: #6b7280;
+}
+
+.master-list-controls .search-field input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+}
+
+.master-list-controls .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.master-list-controls button {
+  min-width: 140px;
+}
+
+.history-button {
+  min-height: 38px;
+  padding: 9px 14px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #05351b;
+}
+
+.history-button:hover {
+  background: #f4f7f6;
 }
 
 .bmi-search-row {
@@ -738,6 +967,57 @@ th {
 .bmi-status.overweight {
   background: #f97316;
 }
+
+/* Monthly report specific styles */
+.report-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 40px;
+}
+
+.report-paper {
+  width: 760px;
+  background: #ffffff;
+  padding: 28px 32px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  border-radius: 6px;
+}
+
+.report-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.report-summary {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+
+.summary-box {
+  flex: 1;
+  background: #eef6fb;
+  padding: 12px;
+  text-align: center;
+  border-radius: 6px;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.report-table th,
+.report-table td {
+  border: 1px solid #111;
+  padding: 8px 10px;
+}
+
+.report-footer { text-align: center; margin-top: 26px; }
+
+.report-controls { display:flex; gap:8px; align-items:center }
+
 
 .bmi-status.obese {
   background: #dc2630;
@@ -1498,6 +1778,79 @@ th {
   .stats-grid {
     grid-template-columns: repeat(3, minmax(160px, 1fr));
   }
+}
+
+.inventory-page {
+  display: grid;
+  gap: 24px;
+  width: min(1400px, 100%);
+  margin-inline: auto;
+}
+
+.inventory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 28px;
+  background: linear-gradient(135deg, #2d5016 0%, #1d6332 100%);
+  color: #ffffff;
+  border-radius: 16px;
+}
+
+.inventory-header h2 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 1.5rem;
+  flex: 1;
+}
+
+.inventory-header button {
+  min-height: 40px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.inventory-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.inventory-stats .panel {
+  text-align: center;
+  padding: 20px;
+}
+
+.inventory-stats strong {
+  display: block;
+  font-size: 2.2rem;
+  color: #05351b;
+  margin-bottom: 8px;
+}
+
+.inventory-stats p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.entry-form table thead tr {
+  background: #285315;
+  color: #ffffff;
+}
+
+.entry-form table th {
+  color: #ffffff;
+  background: #285315;
+  font-size: 0.9rem;
+  text-transform: none;
+  padding: 12px;
+}
+
+.entry-form table td {
+  padding: 12px;
+  color: #050b16;
 }
 
 @media (max-width: 760px) {
