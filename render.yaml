@@ -8,7 +8,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: PORT
-        value: 8000
+        value: 8001
       - key: CLIENT_URL
         sync: false
       - key: DATABASE_URL
