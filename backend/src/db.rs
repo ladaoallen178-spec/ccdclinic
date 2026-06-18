@@ -6,6 +6,17 @@ use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use std::str::FromStr;
 
 pub async fn init_db_pool() -> Option<PgPool> {
+    let enable_pool = env::var("ENABLE_DATABASE_POOL")
+        .map(|value| matches!(value.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
+        .unwrap_or(false);
+
+    if !enable_pool {
+        eprintln!(
+            "ENABLE_DATABASE_POOL is not true; starting without a local Postgres pool. Supabase REST endpoints can still run."
+        );
+        return None;
+    }
+
     let db_url: String = match env::var("DATABASE_URL") {
         Ok(value) if !value.trim().is_empty() => value.trim().to_string(),
         _ => {

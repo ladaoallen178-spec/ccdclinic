@@ -23,10 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 COPY --from=builder /app/target/release/backend /usr/local/bin/backend
 COPY public ./public
+COPY render-start.sh ./render-start.sh
+RUN chmod +x ./render-start.sh
 
 ENV RUST_LOG=info \
     PORT=8000
 
 EXPOSE 8000
 
-CMD ["backend"]
+CMD ["/app/render-start.sh"]
