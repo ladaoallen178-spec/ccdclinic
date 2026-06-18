@@ -7,9 +7,10 @@ pub mod schema;
 pub mod supabase;
 
 use axum::{
-    http::Method,
+    http::{Method, StatusCode},
     middleware::{self},
-    routing::{get, post},
+    response::{Html, IntoResponse},
+    routing::get,
     Json, Router,
 };
 use dotenvy::dotenv;
@@ -29,6 +30,16 @@ use tower_http::{
     set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
 };
+
+async fn spa_index() -> impl IntoResponse {
+    match tokio::fs::read_to_string("public/index.html").await {
+        Ok(html) => Html(html).into_response(),
+        Err(err) => {
+            eprintln!("Failed to read public/index.html: {}", err);
+            StatusCode::NOT_FOUND.into_response()
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -92,8 +103,8 @@ async fn main() {
                 }))
             }),
         )
-        .route("/login", post(api::auth::login))
-        .route("/register", post(api::auth::register))
+        .route("/login", get(spa_index).post(api::auth::login))
+        .route("/register", get(spa_index).post(api::auth::register))
         .nest("/api", api)
         .with_state(state)
         // .route_layer(middleware::from_fn_with_state(
