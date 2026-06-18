@@ -9,7 +9,7 @@ pub mod supabase;
 use axum::{
     http::Method,
     middleware::{self},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use dotenvy::dotenv;
@@ -92,6 +92,8 @@ async fn main() {
                 }))
             }),
         )
+        .route("/login", post(api::auth::login))
+        .route("/register", post(api::auth::register))
         .nest("/api", api)
         .with_state(state)
         // .route_layer(middleware::from_fn_with_state(

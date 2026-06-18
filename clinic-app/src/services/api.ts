@@ -1,6 +1,11 @@
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '/api');
+const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+const API_BASE_URLS = import.meta.env.DEV
+  ? ['']
+  : configuredApiUrl
+    ? [configuredApiUrl]
+    : ['/api', ''];
 const APP_BASE_URL = '';
-const REQUEST_TIMEOUT_MS = 5000;
+const REQUEST_TIMEOUT_MS = 30000;
 
 interface ApiResponse<T> {
   config: {
@@ -48,35 +53,54 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
     ...(headers.Authorization ? { Authorization: 'Bearer ********' } : {}),
   };
 
-  console.debug('[API] Request', {
-    method,
-    url: `${API_BASE_URL}${url}`,
-    data: maskPassword(data),
-    headers: loggedHeaders,
-  });
+  let response: Response | undefined;
+  let baseURL = API_BASE_URLS[0];
+  let lastNetworkError: unknown;
 
-
-  let response: Response;
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    response = await fetch(`${API_BASE_URL}${url}`, {
+  for (let index = 0; index < API_BASE_URLS.length; index += 1) {
+    baseURL = API_BASE_URLS[index];
+    console.debug('[API] Request', {
       method,
-      headers,
-      body: data === undefined ? undefined : JSON.stringify(data),
-      signal: controller.signal,
+      url: `${baseURL}${url}`,
+      data: maskPassword(data),
+      headers: loggedHeaders,
     });
-  } catch (err: any) {
-    const error = new Error(err?.message || 'Network error while making request.') as ApiError;
-    throw error;
-  } finally {
-    window.clearTimeout(timeout);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      response = await fetch(`${baseURL}${url}`, {
+        method,
+        headers,
+        body: data === undefined ? undefined : JSON.stringify(data),
+        signal: controller.signal,
+      });
+
+      if ((response.status === 404 || response.status === 405) && index < API_BASE_URLS.length - 1) {
+        continue;
+      }
+
+      break;
+    } catch (err) {
+      lastNetworkError = err;
+      if (index === API_BASE_URLS.length - 1) {
+        const message = err instanceof Error ? err.message : 'Network error while making request.';
+        throw new Error(message) as ApiError;
+      }
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  if (!response) {
+    const message = lastNetworkError instanceof Error ? lastNetworkError.message : 'Network error while making request.';
+    throw new Error(message) as ApiError;
   }
 
   const responseData = await response.json().catch(() => ({}));
 
   console.debug('[API] Response', {
-    url: `${API_BASE_URL}${url}`,
+    url: `${baseURL}${url}`,
     status: response.status,
     data: responseData,
   });
@@ -102,7 +126,7 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
 
   return {
     config: {
-      baseURL: API_BASE_URL,
+      baseURL,
       url,
     },
     status: response.status,
