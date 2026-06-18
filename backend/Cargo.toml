@@ -26,4 +26,4 @@ rand = "0.8"
 
 [[bin]]
 name = "backend"
-path = "src/engine.rs"
+path = "src/main.rs"
