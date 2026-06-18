@@ -1,9 +1,4 @@
-const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
-const API_BASE_URLS = import.meta.env.DEV
-  ? ['']
-  : configuredApiUrl
-    ? [configuredApiUrl]
-    : ['/api', ''];
+const API_BASE_URLS = import.meta.env.DEV ? [''] : ['', '/api'];
 const APP_BASE_URL = '';
 const REQUEST_TIMEOUT_MS = 30000;
 
