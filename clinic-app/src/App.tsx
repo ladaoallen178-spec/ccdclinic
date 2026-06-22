@@ -8,7 +8,6 @@ import StudentsList from "./pages/StudentsList";
 import Staff from "./pages/Staff";
 import BmiCalculator from "./pages/BmiCalculator";
 import MedicalDocuments from "./pages/MedicalDocuments";
-import MedicalQRCode from "./pages/MedicalQRCode";
 import Inventory from "./pages/Inventory";
 import MasterList from "./pages/MasterList";
 import MonthlyReport from "./pages/MonthlyReport";
@@ -42,8 +41,6 @@ function App() {
           {/* legacy/alternate paths: redirect to current routes */}
           <Route path="bmi-calculator" element={<Navigate to="bmi" replace />} />
           <Route path="medical-docs" element={<MedicalDocuments />} />
-          <Route path="qr-code" element={<MedicalQRCode />} />
-          <Route path="medical-qr" element={<Navigate to="qr-code" replace />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="master-list" element={<MasterList />} />
           <Route path="register-nurse" element={<RegisterNurse />} />

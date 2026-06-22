@@ -1,9 +1,12 @@
-{
+﻿{
   "name": "schoolclinic",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "cd clinic-app && npm install --ignore-scripts && npm run build",
+    "dev": "cd clinic-app && npm run dev",
+    "preview": "cd clinic-app && npm run preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
