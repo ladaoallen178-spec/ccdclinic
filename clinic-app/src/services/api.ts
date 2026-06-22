@@ -1,4 +1,4 @@
-const API_BASE_URLS = import.meta.env.DEV ? [''] : ['', '/api'];
+const API_BASE_URLS = import.meta.env.DEV ? [''] : ['/api'];
 const APP_BASE_URL = '';
 const REQUEST_TIMEOUT_MS = 30000;
 

@@ -562,19 +562,35 @@ function buildReceiptHtml(visit: VisitRecord, student?: StudentRecord) {
 <html>
   <head>
     <title>Clinic Visit Receipt</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      body { font-family: Arial, sans-serif; margin: 32px; color: #05351b; }
-      h1 { margin: 0 0 6px; font-size: 24px; }
-      p { margin: 0 0 22px; color: #475467; }
-      dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px 18px; }
-      dt { font-weight: 700; }
-      dd { margin: 0; }
+      body { font-family: Arial, sans-serif; margin: 24px; color: #05351b; }
+      .header { display:flex;align-items:center;gap:12px;border-bottom:1px solid #e6eef0;padding-bottom:12px;margin-bottom:18px }
+      .logo { width:64px;height:64px;object-fit:contain }
+      .title { flex:1;text-align:center;font-size:20px;font-weight:800 }
+      .meta { font-size:13px;color:#475467 }
+      .details { display:grid;grid-template-columns:150px 1fr;gap:10px 18px;margin-bottom:14px }
+      dt{font-weight:700}
+      dd{margin:0}
+      .section { background:#fbfcfd;border:1px solid #eef2f5;padding:12px;border-radius:8px;margin-bottom:14px }
+      .label{font-weight:700;color:#234f3a;margin-bottom:6px}
+      textarea{width:100%;min-height:84px;padding:8px;border:1px solid #cbd5d9;border-radius:6px;font-size:14px}
+      .presets{display:flex;gap:8px;margin-top:8px}
+      .preset{background:#e6f4ef;border:1px solid #c6e7db;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
+      .signature{display:flex;justify-content:space-between;align-items:center;margin-top:28px}
+      .sig-line{flex:1;border-top:1px solid #999;margin-right:12px;height:36px}
+      .sig-label{width:160px;text-align:center;color:#475467;font-size:13px}
+      @media print{ body{margin:8mm} .presets{display:none} textarea{border:none} }
     </style>
   </head>
   <body>
-    <h1>CCD Clinic Visit Receipt</h1>
-    <p>${createdAt}</p>
-    <dl>
+    <div class="header">
+      <img src="/images/ccd-logo.svg" alt="CCD Logo" class="logo" />
+      <div class="title">CCD Clinic Visit Receipt</div>
+      <div class="meta">${createdAt}</div>
+    </div>
+
+    <dl class="details">
       <dt>Student ID</dt><dd>${id}</dd>
       <dt>Student Name</dt><dd>${name}</dd>
       <dt>Year/Program</dt><dd>${yearProgram}</dd>
@@ -584,6 +600,38 @@ function buildReceiptHtml(visit: VisitRecord, student?: StudentRecord) {
       <dt>Medicine</dt><dd>${medicine}</dd>
       <dt>Referred</dt><dd>${visit.referredToHospital ? 'Yes' : 'No'}</dd>
     </dl>
+
+    <div class="section">
+      <div class="label">Nurse comments / Advice (editable)</div>
+      <textarea id="nurseComment" placeholder="Advice to go home, request to have a sleep, drink more water">Advice: </textarea>
+      <div class="presets">
+        <div class="preset" data-text="Advise to go home and rest">Advise: Go home & rest</div>
+        <div class="preset" data-text="Request to have a sleep">Request: Have a sleep</div>
+        <div class="preset" data-text="Drink more water and monitor">Drink more water</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="label">Actions taken</div>
+      <div>${escapeHtml(visit.medicineGiven || '-')}</div>
+    </div>
+
+    <div class="signature">
+      <div style="flex:1">
+        <div class="sig-line"></div>
+        <div class="sig-label">Nurse signature</div>
+      </div>
+      <div style="width:180px;text-align:center;color:#475467">Date: ${createdAt}</div>
+    </div>
+
+    <script>
+      document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',()=>{
+        const t = document.getElementById('nurseComment');
+        if(!t) return; t.value = btn.getAttribute('data-text');
+      }));
+      // allow Enter to add a line then print
+      function prepareAndPrint(){ window.focus(); window.print(); }
+    </script>
   </body>
 </html>`;
 }
