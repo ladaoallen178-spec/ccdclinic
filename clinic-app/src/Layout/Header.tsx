@@ -1,61 +1,66 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Menu, User } from 'lucide-react';
+import styles from '../styles/components/Header.module.css';
 
-const titles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/add-visit': 'Add New Visit',
-  '/student-entry': 'Students',
-  '/staff-entry': 'Staff',
-  '/bmi-calculator': 'BMI Calculator',
-  '/medical-docs': 'Medical Docs',
-  '/medical-qr': 'Medical QR',
-  '/master-list': 'Master List',
-  '/inventory': 'Inventory',
-  '/register-nurse': 'Register Nurse',
-  '/monthly-report': 'Monthly Report',
-};
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
+interface HeaderProps {
+  onMenuClick: () => void;
 }
 
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
-}
-
-function Header() {
-  const location = useLocation();
-  const [now, setNow] = useState(() => new Date());
-  const title = useMemo(() => titles[location.pathname] ?? 'Dashboard', [location.pathname]);
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
+    const updateDateTime = () => {
+      const now = new Date();
+      setCurrentDate(now.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }));
+      
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      setCurrentTime(`${hours}:${minutes} ${ampm}`);
+    };
+    
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <header className="topbar">
-      <h1>{title}</h1>
-      <div className="topbar-status">
-        <div className="date-card">
-          <strong>{formatDate(now)}</strong>
-          <span>{formatTime(now)}</span>
-        </div>
-        <div className="admin-card">
-          <strong>Master Admin</strong>
-          <span>admin</span>
+    <div className={styles.header}>
+      <div className={styles.pageTitle}>
+        <button className={styles.menuBtn} onClick={onMenuClick}>
+          <Menu size={24} />
+        </button>
+        <div className={styles.logoWrap}>
+          <img src="/images/ccd-logo.svg" alt="CCD Logo" className={styles.dashboardLogo} />
+          <div className={styles.logoTextGroup}>
+            <h2>CCD Clinic</h2>
+            <span className={styles.logoSubtitle}>College of Davao</span>
+          </div>
         </div>
       </div>
-    </header>
+      
+      <div className={styles.userInfo}>
+        <div className={styles.datetimeContainer}>
+          <div className={styles.currentDate}>{currentDate}</div>
+          <div className={styles.currentTime}>{currentTime}</div>
+        </div>
+        <span className={styles.userName}>{user.fullname || 'User'}</span>
+        <span className={styles.roleBadge}>{user.role || 'Nurse'}</span>
+        <div className={styles.userAvatar}>
+          <User size={24} />
+        </div>
+      </div>
+    </div>
   );
-}
+};
 
 export default Header;

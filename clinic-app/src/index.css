@@ -218,17 +218,262 @@ h2 {
 
 .page-content {
   padding-top: 28px;
+  position: relative;
+  min-height: calc(100vh - 84px);
+  overflow: hidden;
+}
+
+.dashboard-shell {
+  background: transparent;
+}
+
+.dashboard-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(135deg, rgba(6, 45, 18, 0.7) 0%, rgba(2, 21, 10, 0.7) 45%, rgba(4, 31, 13, 0.75) 100%), var(--dashboard-bg);
+  background-position: center center, center center;
+  background-size: cover, cover;
+  background-repeat: no-repeat, no-repeat;
+  opacity: 1;
+  filter: blur(1px) saturate(1.1);
+  z-index: 0;
+}
+
+.dashboard-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(20, 169, 89, 0.18), transparent 22%),
+              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08), transparent 18%),
+              radial-gradient(circle at 20% 85%, rgba(56, 233, 87, 0.12), transparent 16%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.nurse-dashboard-shell::before {
+  background-image: linear-gradient(135deg, rgba(6, 45, 18, 0.65) 0%, rgba(2, 21, 10, 0.65) 45%, rgba(4, 31, 13, 0.70) 100%), var(--dashboard-bg);
+}
+
+.nurse-dashboard-shell .panel {
+  background: rgba(18, 28, 27, 0.70);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.nurse-dashboard-shell .panel h1,
+.nurse-dashboard-shell .panel h2,
+.nurse-dashboard-shell .panel p,
+.nurse-dashboard-shell .stat-card p {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.nurse-dashboard-shell .stat-card {
+  background: rgba(9, 18, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.nurse-dashboard-shell .stat-card strong {
+  color: #ffffff;
+}
+
+.dashboard-floaters {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.float-bubble {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(1px);
+  opacity: 0.45;
+  animation: floatBubble 8s ease-in-out infinite;
+}
+
+.bubble-a {
+  width: 140px;
+  height: 140px;
+  background: rgba(42, 170, 101, 0.28);
+  top: 10%;
+  left: 8%;
+}
+
+.bubble-b {
+  width: 220px;
+  height: 220px;
+  background: rgba(110, 205, 142, 0.16);
+  top: 55%;
+  right: 2%;
+  animation-delay: 2s;
+}
+
+.bubble-c {
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.18);
+  top: 40%;
+  left: 55%;
+  animation-delay: 4s;
+}
+
+.dashboard-header-large {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 28px;
+  padding: 18px 26px;
+  margin-bottom: 22px;
+  background: #ffffff;
+  color: #05351b;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.header-title h1 {
+  font-size: clamp(2.4rem, 3vw, 3.2rem);
+  color: #f8fbf7;
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+
+.header-subtitle {
+  margin-top: 14px;
+  max-width: 700px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.12rem;
+}
+
+.logo-container {
+  width: 120px;
+  min-width: 120px;
+  height: 120px;
+  border-radius: 16px;
+  padding: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg,#103d1f,#0b2e14);
+  border: 2px solid rgba(0,0,0,0.06);
+}
+
+.clinic-logo {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
 }
 
 .dashboard-page {
+  position: relative;
+  z-index: 2;
   display: grid;
-  gap: 28px;
+  gap: 24px;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(150px, 1fr));
-  gap: 20px;
+.dashboard-page-grid {
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 0.8fr);
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid rgba(15,23,42,0.04);
+  border-radius: 18px;
+  padding: 22px;
+  color: #05351b;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  animation: fadeSlideUp 0.9s ease-out;
+}
+
+.go-to-bmi-button {
+  margin-top: 18px;
+  padding: 14px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #f7fbf7;
+  font-weight: 700;
+  width: fit-content;
+  transition: var(--transition);
+}
+
+.go-to-bmi-button:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
+
+.panel-glass {
+  background: rgba(10, 37, 23, 0.75);
+}
+
+.panel-hero {
+  min-height: 240px;
+}
+
+.panel-quick-links ul {
+  margin: 18px 0 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.panel-quick-links li {
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.panel h1,
+.panel h2 {
+  margin: 0 0 16px;
+  color: #fff;
+  font-size: 1.55rem;
+}
+
+.panel p {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+
+.stat-card strong {
+  font-size: 2.8rem;
+}
+
+.stat-card p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1rem;
+}
+
+@keyframes floatBubble {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-16px) scale(1.02);
+  }
+}
+
+@keyframes liftIn {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stat-card {

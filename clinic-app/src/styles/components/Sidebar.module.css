@@ -11,6 +11,26 @@
   z-index: 1000;
 }
 
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.25);
+  border-radius: 8px;
+}
+
+/* When the dashboard is active, allow the sidebar to blend with the
+   school's background image by using the global CSS variable set by the
+   dashboard component. Uses :global so the body class is detected from
+   outside the CSS module scope. */
+:global(.dashboard-active) .sidebar {
+  background-image: linear-gradient(180deg, rgba(10,40,20,0.85) 0%, rgba(7,30,15,0.85) 100%), var(--dashboard-bg);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  color: var(--sidebar-text);
+}
+
 .sidebarCollapsed {
   width: 70px;
 }
@@ -22,18 +42,20 @@
 }
 
 .logoContainer {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 15px;
-  border-radius: 50%;
+  width: 110px;
+  height: 110px;
+  margin: 18px auto 12px;
+  border-radius: 12px;
   overflow: hidden;
-  border: 3px solid var(--accent);
+  display: grid;
+  place-items: center;
+  border: 3px solid rgba(255,255,255,0.06);
 }
 
 .logoImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
 }
 
 .logoPlaceholder {

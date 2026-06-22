@@ -1,90 +1,101 @@
-import { FormEvent, useState } from 'react';
-import { CalendarCheck, FileText, Lock, Mail, PlusCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Mail, Lock, PlusCircle, CalendarCheck, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { login as loginUser } from '../services/auth';
+import { login, isAuthenticated } from '../services/auth';
+import styles from '../styles/pages/Login.module.css';
 
-function Login() {
+const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get('email') || '').trim();
-    const password = String(formData.get('password') || '');
-
-    setIsSubmitting(true);
-    const result = await loginUser(email, password);
-    setIsSubmitting(false);
-
-    if (!result.success) {
-      toast.error(result.message || 'Invalid email or password.');
-      return;
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate('/dashboard');
     }
+  }, [navigate]);
 
-    toast.success('Logged in');
-    navigate('/dashboard', { replace: true });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const response = await login(email, password);
+      if (response.success) {
+        toast.success('Login successful!');
+        navigate('/dashboard');
+      } else {
+        toast.error(response.message || 'Login failed');
+      }
+    } catch (error) {
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="auth-page">
-      <section className="login-card" aria-label="Clinic management staff login">
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="school-mark">
-            <img src="/favicon.svg" alt="College of Davao logo" />
-            <h1>CCD</h1>
-            <p>College of Davao</p>
-            <span>Clinic Management System</span>
+    <div className={styles.loginContainer}>
+      <div className={styles.wrapper}>
+        <div className={styles.bgAnimate}></div>
+        <div className={styles.formBox}>
+          <div className={styles.logoArea}>
+            <div className={styles.logoIcon}>
+              <img 
+                src="/images/logo.png" 
+                alt="CCD Clinic Logo" 
+                className={styles.logoImage}
+              />
+            </div>
+            <div className={styles.logoText}>CCD</div>
+            <div className={styles.logoSub}>COLLEGE OF DAVAO</div>
+            <div className={styles.logoYear}>CLINIC MANAGEMENT SYSTEM</div>
+            <div className={styles.logoDivider}></div>
           </div>
 
-          <label className="login-field">
-            <span>
-              <Mail size={16} />
-              Email Address
-            </span>
-            <input type="email" name="email" required />
-          </label>
+          <form onSubmit={handleSubmit}>
+            <div className={styles.inputBox}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+              <label>Email Address</label>
+              <Mail size={18} className={styles.inputIcon} />
+            </div>
+            
+            <div className={styles.inputBox}>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <label>Password</label>
+              <Lock size={18} className={styles.inputIcon} />
+            </div>
+            
+            <button type="submit" className={styles.btn} disabled={loading}>
+              {loading ? 'Logging in...' : '🔐 Login to Dashboard'}
+            </button>
+          </form>
+        </div>
 
-          <label className="login-field">
-            <span>
-              <Lock size={16} />
-              Password
-            </span>
-            <input type="password" name="password" required />
-          </label>
-
-          <button className="login-button" type="submit" disabled={isSubmitting}>
-            <Lock size={16} />
-            {isSubmitting ? 'Checking account...' : 'Login to Dashboard'}
-          </button>
-        </form>
-
-        <aside className="login-welcome">
-          <div>
-            <h2>Welcome Staff!</h2>
-            <p>Manage clinic visits, student records, and health reports efficiently.</p>
+        <div className={styles.infoText}>
+          <h2>Welcome Staff!</h2>
+          <p>Manage clinic visits, student records, and health reports efficiently.</p>
+          <div className={styles.infoIcons}>
+            <div><PlusCircle size={28} color="#2ecc2e" /><p>Add Records</p></div>
+            <div><CalendarCheck size={28} color="#2ecc2e" /><p>Appointments</p></div>
+            <div><FileText size={28} color="#2ecc2e" /><p>Reports</p></div>
           </div>
-
-          <div className="feature-row" aria-label="Clinic management features">
-            <span>
-              <PlusCircle size={24} />
-              Add Records
-            </span>
-            <span>
-              <CalendarCheck size={24} />
-              Appointments
-            </span>
-            <span>
-              <FileText size={24} />
-              Reports
-            </span>
-          </div>
-        </aside>
-      </section>
-    </main>
+        </div>
+      </div>
+    </div>
   );
-}
+};
 
 export default Login;

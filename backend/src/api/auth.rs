@@ -62,6 +62,7 @@ pub struct UserResponse {
 
 #[derive(Serialize)]
 pub struct AuthResponse {
+    pub success: bool,
     pub token: String,
     pub user: UserResponse,
 }
@@ -173,6 +174,7 @@ pub async fn register(
     match create_token(&state.jwt_secret, user_id, &email).await {
         Ok(token) => {
             let response = AuthResponse {
+                success: true,
                 token,
                 user: UserResponse {
                     id: user_id,
@@ -308,6 +310,7 @@ pub async fn login(
     match create_token(&state.jwt_secret, user_id, &email).await {
         Ok(token) => {
             let response = AuthResponse {
+                success: true,
                 token,
                 user: UserResponse {
                     id: user_id,

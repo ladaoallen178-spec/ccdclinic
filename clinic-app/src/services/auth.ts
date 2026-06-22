@@ -35,7 +35,7 @@ export const login = async (email: string, password: string): Promise<LoginRespo
       return { success: true, token: data.token, user: data.user };
     }
 
-    return { success: false, message: data.message || 'Invalid email or password.' };
+    return { success: false, message: data.error || data.message || 'Invalid email or password.' };
   } catch (error: any) {
     console.error('[AUTH] Login error', error?.response?.data || error.message || error);
     const msg = error.response?.data?.error || error.message || 'Network error. Please try again.';
