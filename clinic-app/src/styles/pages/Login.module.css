@@ -5,9 +5,7 @@
   padding: 24px;
   overflow: hidden;
   color: #ffffff;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(29, 143, 28, 0.28), transparent 34%),
-    linear-gradient(135deg, #082f0e 0%, #05320d 52%, #052a0c 100%);
+  background: transparent;
 }
 
 .wrapper {
@@ -19,7 +17,7 @@
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.92);
   border-radius: 8px;
-  background: rgba(4, 49, 13, 0.76);
+  background: rgba(4, 49, 13, 0.36);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38);
 }
 

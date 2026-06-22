@@ -1,4 +1,6 @@
-const API_BASE_URLS = import.meta.env.DEV ? [''] : ['/api'];
+// In dev, point to the local backend server so fetch() hits the API.
+// In production the app is served from the backend under `/api`.
+const API_BASE_URLS = import.meta.env.DEV ? ['http://localhost:8001'] : ['/api'];
 const APP_BASE_URL = '';
 const REQUEST_TIMEOUT_MS = 30000;
 

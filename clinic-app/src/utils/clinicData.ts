@@ -281,7 +281,8 @@ export function saveNurses(nurses: NurseRecord[]) {
 }
 
 export function getVisits() {
-  return readStorage('clinic-visits', defaultVisits);
+  const v = readStorage('clinic-visits', defaultVisits);
+  return Array.isArray(v) ? (v as VisitRecord[]) : defaultVisits;
 }
 
 export function saveVisits(visits: VisitRecord[]) {
@@ -290,7 +291,8 @@ export function saveVisits(visits: VisitRecord[]) {
 }
 
 export function getInventory() {
-  return readStorage('clinic-inventory', defaultInventory);
+  const inventory = readStorage('clinic-inventory', defaultInventory);
+  return Array.isArray(inventory) ? (inventory as InventoryItem[]) : defaultInventory;
 }
 
 export function saveInventory(items: InventoryItem[]) {
@@ -299,7 +301,8 @@ export function saveInventory(items: InventoryItem[]) {
 }
 
 export function getBmiRecords() {
-  return readStorage('clinic-bmi-records', defaultBmiRecords);
+  const records = readStorage('clinic-bmi-records', defaultBmiRecords);
+  return Array.isArray(records) ? (records as BmiRecord[]) : defaultBmiRecords;
 }
 
 export function saveBmiRecords(records: BmiRecord[]) {

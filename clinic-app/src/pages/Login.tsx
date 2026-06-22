@@ -43,9 +43,9 @@ const Login: React.FC = () => {
         <div className={styles.formBox}>
           <div className={styles.logoArea}>
             <div className={styles.logoIcon}>
-              <img 
-                src="/images/logo.png" 
-                alt="CCD Clinic Logo" 
+              <img
+                src="/images/logo.png"
+                alt="College of Davao Logo"
                 className={styles.logoImage}
               />
             </div>

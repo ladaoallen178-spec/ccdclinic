@@ -10,8 +10,8 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
 import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
-import background from '../assets/background.png';
 import logoImg from '../assets/logo.png';
+import heroImg from '../assets/hero.png';
 
 function NurseDashboard() {
   const navigate = useNavigate();
@@ -24,16 +24,14 @@ function NurseDashboard() {
       .catch(() => undefined);
     window.addEventListener('clinic-data-changed', refreshStats);
     window.addEventListener('storage', refreshStats);
-    // Add a global body class and CSS variable so sibling components (sidebar)
-    // can adapt their styles when the dashboard is active.
+    // Add a global body class so sibling components (sidebar) can adapt
+    // their styles when the dashboard is active.
     document.body.classList.add('dashboard-active');
-    document.body.style.setProperty('--dashboard-bg', `url(${background})`);
 
     return () => {
       window.removeEventListener('clinic-data-changed', refreshStats);
       window.removeEventListener('storage', refreshStats);
       document.body.classList.remove('dashboard-active');
-      document.body.style.removeProperty('--dashboard-bg');
     };
   }, []);
 
@@ -47,7 +45,10 @@ function NurseDashboard() {
   ];
 
   return (
-    <div className="dashboard-page dashboard-shell nurse-dashboard-shell" style={{ '--dashboard-bg': `url(${background})` } as CSSProperties}>
+    <div
+      className="dashboard-page dashboard-shell nurse-dashboard-shell"
+      style={{ '--dashboard-bg': `url(${heroImg})` } as CSSProperties}
+    >
       <header className="dashboard-header-large">
         <div className="logo-container">
           <img src={logoImg} className="clinic-logo" alt="CCD Logo" />
