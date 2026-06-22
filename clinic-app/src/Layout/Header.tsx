@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <Menu size={24} />
         </button>
         <div className={styles.logoWrap}>
-          <img src="/images/ccd-logo.svg" alt="CCD Logo" className={styles.dashboardLogo} />
+          <img src="/images/logo.png" alt="CCD Logo" className={styles.dashboardLogo} />
           <div className={styles.logoTextGroup}>
             <h2>CCD Clinic</h2>
             <span className={styles.logoSubtitle}>College of Davao</span>
