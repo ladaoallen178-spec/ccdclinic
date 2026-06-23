@@ -60,13 +60,30 @@ async fn main() {
         .layer(TraceLayer::new_for_http());
 
     // Serve static files from `public/` and provide SPA fallback to `public/index.html`.
-    let static_service = get_service(ServeDir::new("public")).handle_error(|_| async move {
+    let assets_service = get_service(ServeDir::new("public/assets")).handle_error(|_| async move {
         (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
     });
 
+    let images_service = get_service(ServeDir::new("public/images")).handle_error(|_| async move {
+        (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+    });
+
+    let favicon = ServeFile::new("public/favicon.svg");
+    let icons = ServeFile::new("public/icons.svg");
+
     let app = Router::new()
-        .nest_service("/", static_service)
+        // API routes first so they are reachable at /register and /login
         .merge(api)
+        // Serve static asset folders at their expected paths
+        .nest_service("/assets", assets_service)
+        .nest_service("/images", images_service)
+        .route("/favicon.svg", get_service(favicon).handle_error(|_| async move {
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        }))
+        .route("/icons.svg", get_service(icons).handle_error(|_| async move {
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        }))
+        // SPA fallback for all other routes
         .fallback_service(get_service(ServeFile::new("public/index.html")).handle_error(|_| async move {
             (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
         }));
