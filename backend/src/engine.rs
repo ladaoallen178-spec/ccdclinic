@@ -4,11 +4,11 @@ pub mod db;
 pub mod limiters;
 pub mod security;
 
-use axum::{http::{Method}, middleware::{self}, Extension};
+use axum::{http::{Method, StatusCode}, middleware::{self}, Extension, Router, routing::get_service};
 use dotenvy::dotenv;
 use std::env;
 
-use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer,};
+use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer, services::{ServeDir, ServeFile}};
 use db::init_db_pool;
 use routes::auth::{auth_routes, AppState};
 use limiters::{ConcurrencyLimiter, enforce_concurrency};
@@ -46,12 +46,9 @@ async fn main() {
         jwt_secret,
     };
 
-    let app = auth_routes()
+    let api = auth_routes()
         .with_state(state)
         .layer(Extension(db_pool))
-        // .route_layer(middleware::from_fn_with_state(
-        //     allowed_origin.clone()
-        // ))
         .layer(middleware::from_fn(move |req, next| {
             enforce_concurrency(limiter.clone(), req, next)
         }))
@@ -61,6 +58,18 @@ async fn main() {
             axum::http::HeaderValue::from_static("max-age=31536000; includeSubDomains"),
         ))
         .layer(TraceLayer::new_for_http());
+
+    // Serve static files from `public/` and provide SPA fallback to `public/index.html`.
+    let static_service = get_service(ServeDir::new("public")).handle_error(|_| async move {
+        (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+    });
+
+    let app = Router::new()
+        .nest_service("/", static_service)
+        .merge(api)
+        .fallback_service(get_service(ServeFile::new("public/index.html")).handle_error(|_| async move {
+            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        }));
 
     let addr = format!("0.0.0.0:{}", port);
     println!("Server running on http://{}", addr);
