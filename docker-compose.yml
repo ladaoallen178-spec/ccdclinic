@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: myengine_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: myengine
+    ports:
+      - "5433:5432"
+    volumes:
+      - myengine_db_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myengine_api
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/myengine
+      SUPABASE_URL: http://localhost:5173
+      CLIENT_URL: http://localhost:5173
+    ports:
+      - "8000:8000"
+
+volumes:
+  myengine_db_data:

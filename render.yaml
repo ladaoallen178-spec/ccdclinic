@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: schoolclinic-backend
+    env: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    branch: main
+    region: oregon
+    buildCommand: ""
+    startCommand: ""
+    envVars:
+      # Add your secrets in the Render dashboard or replace these with secure values.
+      - key: DATABASE_URL
+        value: ""
+      - key: JWT_SECRET
+        value: ""
+      - key: CLIENT_URL
+        value: ""
+      - key: RUST_LOG
+        value: "info"
+
+# Notes:
+# - This manifest is a starting point. For production, add your DATABASE_URL and other secrets
+#   using the Render dashboard's Secrets/Environment settings rather than committing them to git.
+# - Render will set the `PORT` environment variable at runtime; the backend reads `PORT`.

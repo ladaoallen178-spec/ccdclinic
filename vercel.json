@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "clinic-app/package.json", "use": "@vercel/static-build" }
+  ],
+  "routes": [
+    { "src": "^/(.*)$", "dest": "/index.html" }
+  ],
+  "build": {
+    "env": {
+      "VITE_BASE": "/",
+      "VITE_API_URL": ""
+    }
+  }
+}
