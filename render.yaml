@@ -3,7 +3,7 @@ services:
     name: schoolclinic-backend
     env: docker
     plan: free
-    dockerfilePath: backend/Dockerfile
+    dockerfilePath: Dockerfile
     branch: main
     region: oregon
     buildCommand: ""
