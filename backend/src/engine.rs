@@ -4,12 +4,12 @@ pub mod db;
 pub mod limiters;
 pub mod security;
 
-use axum::{http::{Method, StatusCode, header::HeaderValue as AxHeaderValue}, middleware, Extension, Router, routing::get};
+use axum::{http::{Method, StatusCode}, middleware, Extension, Router, routing::get};
 use dotenvy::dotenv;
 use std::env;
 
 use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer};
-use axum::{extract::Path as AxPath, response::{IntoResponse, Html, Response}};
+use axum::{extract::Path as AxPath, response::{IntoResponse, Html}};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
 use std::path::PathBuf;
