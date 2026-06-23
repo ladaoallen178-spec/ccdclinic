@@ -8,8 +8,8 @@ use axum::{http::{Method, StatusCode}, middleware, Extension, Router, routing::g
 use dotenvy::dotenv;
 use std::env;
 
-use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer};
-use axum::{extract::Path as AxPath, response::{IntoResponse, Html}};
+use tower_http::{cors::{CorsLayer}, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use axum::response::{IntoResponse, Html};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
 use std::path::PathBuf;
@@ -24,14 +24,20 @@ async fn main() {
     tracing_subscriber::fmt::init();
     dotenv().ok();
 
-    let client_origin = env::var("CLIENT_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+    let client_origin = env::var("CLIENT_URL")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .unwrap_or_else(|| "http://localhost:5173".to_string());
     let limiter = ConcurrencyLimiter::new(5);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = CorsLayer::new()
         .allow_origin(
-            client_origin.parse::<axum::http::HeaderValue>().unwrap()
+            client_origin
+                .parse::<axum::http::HeaderValue>()
+                .expect("CLIENT_URL must be a valid origin, like https://your-app.vercel.app")
         )
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([
@@ -64,7 +70,7 @@ async fn main() {
         ))
         .layer(TraceLayer::new_for_http());
 
-    // Serve static files from `public/` using small handlers (avoids tower-http fs feature)
+    // Serve static files from `public/` using small handlers for single files.
 
     use axum::http::HeaderMap;
 
@@ -98,14 +104,8 @@ async fn main() {
         // API routes first so they are reachable at /register and /login
         .merge(api)
         // Serve static asset folders at their expected paths
-        .nest(
-            "/assets",
-            Router::new().route("/*path", get(|AxPath(path): AxPath<PathBuf>| async move { serve_static("public/assets", path).await })),
-        )
-        .nest(
-            "/images",
-            Router::new().route("/*path", get(|AxPath(path): AxPath<PathBuf>| async move { serve_static("public/images", path).await })),
-        )
+        .nest_service("/assets", ServeDir::new("public/assets"))
+        .nest_service("/images", ServeDir::new("public/images"))
         .route("/favicon.svg", get(|| async { serve_static("public", PathBuf::from("favicon.svg")).await }))
         .route("/icons.svg", get(|| async { serve_static("public", PathBuf::from("icons.svg")).await }))
         // SPA fallback for all other routes

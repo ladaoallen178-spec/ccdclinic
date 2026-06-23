@@ -9,13 +9,12 @@ services:
     buildCommand: ""
     startCommand: ""
     envVars:
-      # Add your secrets in the Render dashboard or replace these with secure values.
       - key: DATABASE_URL
-        value: ""
+        sync: false
       - key: JWT_SECRET
-        value: ""
+        sync: false
       - key: CLIENT_URL
-        value: ""
+        sync: false
       - key: RUST_LOG
         value: "info"
 
