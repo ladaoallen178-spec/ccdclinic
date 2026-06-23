@@ -4,11 +4,16 @@ pub mod db;
 pub mod limiters;
 pub mod security;
 
-use axum::{http::{Method, StatusCode}, middleware::{self}, Extension, Router, routing::get_service};
+use axum::{http::{Method, StatusCode, header::HeaderValue as AxHeaderValue}, middleware, Extension, Router, routing::get};
 use dotenvy::dotenv;
 use std::env;
 
-use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer, services::{ServeDir, ServeFile}};
+use tower_http::{cors::{CorsLayer}, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use axum::{extract::Path as AxPath, response::{IntoResponse, Html, Response}};
+use axum::http::header::CONTENT_TYPE;
+use axum::http::HeaderValue;
+use std::path::PathBuf;
+use mime_guess;
 use db::init_db_pool;
 use routes::auth::{auth_routes, AppState};
 use limiters::{ConcurrencyLimiter, enforce_concurrency};
@@ -59,33 +64,62 @@ async fn main() {
         ))
         .layer(TraceLayer::new_for_http());
 
-    // Serve static files from `public/` and provide SPA fallback to `public/index.html`.
-    let assets_service = get_service(ServeDir::new("public/assets")).handle_error(|_| async move {
-        (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-    });
+    // Serve static files from `public/` using small handlers (avoids tower-http fs feature)
 
-    let images_service = get_service(ServeDir::new("public/images")).handle_error(|_| async move {
-        (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-    });
+    use axum::http::HeaderMap;
 
-    let favicon = ServeFile::new("public/favicon.svg");
-    let icons = ServeFile::new("public/icons.svg");
+    async fn serve_static(base: &str, path: PathBuf) -> (HeaderMap, Vec<u8>) {
+        let full = std::path::Path::new(base).join(&path);
+        if !full.exists() || !full.is_file() {
+            let mut headers = HeaderMap::new();
+            headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+            return (headers, b"Not found".to_vec());
+        }
+
+        match tokio::fs::read(&full).await {
+            Ok(body) => {
+                let mime = mime_guess::from_path(&full).first_or_octet_stream();
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    CONTENT_TYPE,
+                    HeaderValue::from_str(mime.as_ref()).unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
+                );
+                (headers, body)
+            }
+            Err(_) => {
+                let mut headers = HeaderMap::new();
+                headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+                (headers, b"Internal server error".to_vec())
+            }
+        }
+    }
 
     let app = Router::new()
         // API routes first so they are reachable at /register and /login
         .merge(api)
         // Serve static asset folders at their expected paths
-        .nest_service("/assets", assets_service)
-        .nest_service("/images", images_service)
-        .route("/favicon.svg", get_service(favicon).handle_error(|_| async move {
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-        }))
-        .route("/icons.svg", get_service(icons).handle_error(|_| async move {
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
-        }))
+        .nest(
+            "/assets",
+            Router::new().route("/*path", get(|AxPath(path): AxPath<PathBuf>| async move { serve_static("public/assets", path).await })),
+        )
+        .nest(
+            "/images",
+            Router::new().route("/*path", get(|AxPath(path): AxPath<PathBuf>| async move { serve_static("public/images", path).await })),
+        )
+        .route("/favicon.svg", get(|| async { serve_static("public", PathBuf::from("favicon.svg")).await }))
+        .route("/icons.svg", get(|| async { serve_static("public", PathBuf::from("icons.svg")).await }))
         // SPA fallback for all other routes
-        .fallback_service(get_service(ServeFile::new("public/index.html")).handle_error(|_| async move {
-            (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+        .fallback_service(get(|| async {
+            let index_path = std::path::Path::new("public/index.html");
+            if index_path.exists() {
+                match tokio::fs::read_to_string(index_path).await {
+                    Ok(contents) => Html(contents).into_response(),
+                    Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error").into_response(),
+                }
+            } else {
+                const FALLBACK: &str = "<!doctype html><html><body><h1>Backend running</h1><p>Frontend not built into image.</p></body></html>";
+                Html(FALLBACK).into_response()
+            }
         }));
 
     let addr = format!("0.0.0.0:{}", port);
