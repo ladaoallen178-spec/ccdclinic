@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStaff, getVisits } from '../utils/clinicData';
 import type { StaffRecord, VisitRecord } from '../utils/clinicData';
 import { createVisitRecord, deleteStaffRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
@@ -187,6 +188,10 @@ function StaffEntry() {
       </tr>
     );
   };
+
+  if (historyStaff) {
+    return <MedicalHistoryRecord type="Staff" record={historyStaff} visits={staffVisits} onBack={() => setHistoryStaffId(null)} />;
+  }
 
   return (
     <section className="student-management-page">

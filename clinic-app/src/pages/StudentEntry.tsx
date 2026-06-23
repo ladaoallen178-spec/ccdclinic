@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import {
   getStudents,
   getVisits,
@@ -186,6 +187,10 @@ function StudentEntry() {
       </tr>
     );
   };
+
+  if (historyStudent) {
+    return <MedicalHistoryRecord type="Student" record={historyStudent} visits={studentVisits} onBack={() => setHistoryStudentId(null)} />;
+  }
 
   return (
     <section className="student-management-page">

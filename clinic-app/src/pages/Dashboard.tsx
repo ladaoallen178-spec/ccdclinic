@@ -1,35 +1,52 @@
 import React from 'react'
+import { GraduationCap, Briefcase, Calendar, Truck, Clock, Clock3 } from 'lucide-react';
 
 export default function Dashboard() {
+  const stats = [
+    { icon: GraduationCap, label: 'Students', value: '15', sublabel: 'Total Students', color: 'bg-green-50' },
+    { icon: Briefcase, label: 'Staff', value: '6', sublabel: 'Total Staff', color: 'bg-blue-50' },
+    { icon: Calendar, label: 'Today', value: '0', sublabel: 'Visits Today', color: 'bg-purple-50' },
+    { icon: Truck, label: 'Referred', value: '0', sublabel: 'Referred Today', color: 'bg-red-50' },
+    { icon: Clock, label: 'Pending', value: '4', sublabel: 'Student Pending', color: 'bg-orange-50' },
+  ];
+
+  const staffPending = { icon: Clock3, label: 'Pending', value: '1', sublabel: 'Staff Pending', color: 'bg-pink-50' };
+
   return (
-    <div className="page-content">
-      {/* Header with Logo */}
-      <header className="dashboard-header">
-        <div className="logo-container">
-          <img 
-            src="/images/logo.png" 
-            alt="CCD Clinic Logo" 
-            className="clinic-logo"
-          />
-        </div>
-        <div className="header-title">
-          <h1>CCD Clinic Management System</h1>
-        </div>
-      </header>
-
+    <div className="page-content dashboard-content">
       <section className="dashboard-page">
-        <article className="panel">
-          <h1>Dashboard</h1>
-          <p>Welcome to the CCD clinic dashboard. Here you can review clinic activity at a glance.</p>
-        </article>
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          {stats.map((stat, idx) => (
+            <article key={idx} className={`stat-card panel ${stat.color}`}>
+              <div className="stat-icon">
+                <stat.icon size={32} />
+              </div>
+              <div className="stat-content">
+                <h3 className="stat-label">{stat.label}</h3>
+                <p className="stat-value">{stat.value}</p>
+                <p className="stat-sublabel">{stat.sublabel}</p>
+              </div>
+            </article>
+          ))}
+          
+          {/* Staff Pending Card */}
+          <article className={`stat-card panel ${staffPending.color}`}>
+            <div className="stat-icon">
+              <staffPending.icon size={32} />
+            </div>
+            <div className="stat-content">
+              <h3 className="stat-label">{staffPending.label}</h3>
+              <p className="stat-value">{staffPending.value}</p>
+              <p className="stat-sublabel">{staffPending.sublabel}</p>
+            </div>
+          </article>
+        </div>
 
-        <article className="panel">
-          <h2>Quick Links</h2>
-          <ul>
-            <li>View students, staff, inventory, and clinic reports.</li>
-            <li>Assign visits and access nurse workflows.</li>
-            <li>Monitor daily service metrics.</li>
-          </ul>
+        {/* Quick Stats Overview */}
+        <article className="panel quick-stats">
+          <h2>Quick Stats Overview</h2>
+          <p>Welcome to the CCD School Clinic Management System. Use the sidebar to navigate through different sections including student management, staff management, clinic visits, medical documents, and reports.</p>
         </article>
       </section>
     </div>
