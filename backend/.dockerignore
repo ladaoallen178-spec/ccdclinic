@@ -1,5 +1,0 @@
-.env
-.env.*
-target/
-.git/
-docker-compose.yml

@@ -1,26 +1,46 @@
-# Rust
-backend/target/
-Cargo.lock
-*.pdb
-*.rlib
-
-# Node/npm
+# Node
 node_modules/
+
+# Vite
 dist/
+
+# Env
+.env
 .env.local
 .env.*.local
-.env
-.env.*
-backend/.env
-backend/.env.*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # OS
 .DS_Store
 Thumbs.db
-clinic-app/.env
+
+# Rust target artifacts
+backend/target/
+
+# IDE
+.vscode/
+.idea/
+
+# Build outputs
+clinic-app/dist/
+schoolclinic-new/dist/
+
+# npm package lock (optional)
+package-lock.json
+
+# Yarn
+yarn.lock
+
+# Misc
+*.log
+*.tmp
+
+# Large binaries (avoid committing build artifacts)
+**/target/**
+**/*.rlib
+**/*.pdb
