@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { PlusCircle, Search, Trash, Plus, ArrowLeft } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { PlusCircle, Search, Trash, Plus, ArrowLeft, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import { getInventory, saveInventory } from '../utils/clinicData';
 import {
   createInventoryLog,
@@ -41,6 +42,18 @@ type InventoryLog = {
 };
 
 const LOG_KEY = 'clinic-inventory-log';
+const INVENTORY_IMPORT_FIELDS = {
+  name: ['medicine name', 'item name', 'name', 'medicine', 'item', 'product', 'supply name'],
+  dosage: ['dosage', 'dose', 'strength'],
+  stock: ['quantity', 'qty', 'stock', 'stock count', 'current stock', 'on hand'],
+  unit: ['unit', 'uom', 'measure'],
+  expiry: ['expiry', 'expiration', 'expiration date', 'expiry date', 'expires'],
+  supplier: ['supplier', 'vendor', 'source'],
+  location: ['location', 'storage location', 'cabinet', 'shelf'],
+  remarks: ['remarks', 'notes', 'note', 'description'],
+};
+
+type SpreadsheetRow = Record<string, unknown>;
 
 function readLogs(): InventoryLog[] {
   try {
@@ -60,8 +73,42 @@ function genId(prefix = 'INV') {
   return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
 }
 
+function normalizeHeader(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function readImportCell(row: SpreadsheetRow, aliases: string[]) {
+  const normalizedAliases = aliases.map(normalizeHeader);
+  const entry = Object.entries(row).find(([key]) => normalizedAliases.includes(normalizeHeader(key)));
+  return entry?.[1];
+}
+
+function toText(value: unknown) {
+  return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();
+}
+
+function toStock(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.floor(value));
+  const text = toText(value).replace(/,/g, '');
+  const match = text.match(/-?\d+(\.\d+)?/);
+  return match ? Math.max(0, Math.floor(Number(match[0]))) : 0;
+}
+
+function toDateInputValue(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const text = toText(value);
+  if (!text) return '';
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? text : parsed.toISOString().slice(0, 10);
+}
+
 export default function Inventory() {
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [items, setItems] = useState<InventoryRow[]>(() => {
     const loaded = getInventory();
     return Array.isArray(loaded)
@@ -95,10 +142,10 @@ export default function Inventory() {
   const [location, setLocation] = useState('');
   const [remarks, setRemarks] = useState('');
   const [showNewItemForm, setShowNewItemForm] = useState(true);
+  const [isUploadingInventory, setIsUploadingInventory] = useState(false);
 
   useEffect(() => {
-    const minimal = items.map((it) => ({ name: it.name, stock: it.stock, status: it.status || (it.stock > 0 ? 'In Stock' : 'Out of Stock'), id: it.id }));
-    saveInventory(minimal as any);
+    saveInventory(items as any);
   }, [items]);
 
   useEffect(() => {
@@ -142,6 +189,73 @@ export default function Inventory() {
     setSupplier('');
     setLocation('');
     setRemarks('');
+  }
+
+  function mapSpreadsheetRowToInventory(row: SpreadsheetRow): InventoryRow | null {
+    const itemName = toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.name));
+    if (!itemName) return null;
+
+    const stock = toStock(readImportCell(row, INVENTORY_IMPORT_FIELDS.stock));
+
+    return {
+      id: genId(),
+      name: itemName,
+      dosage: toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.dosage)),
+      stock,
+      unit: toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.unit)) || 'tablet',
+      status: stock > 0 ? 'In Stock' : 'Out of Stock',
+      expiry: toDateInputValue(readImportCell(row, INVENTORY_IMPORT_FIELDS.expiry)),
+      supplier: toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.supplier)),
+      location: toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.location)),
+      remarks: toText(readImportCell(row, INVENTORY_IMPORT_FIELDS.remarks)),
+      keywords: detectKeywords(itemName),
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  async function handleInventoryFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingInventory(true);
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const firstSheetName = workbook.SheetNames[0];
+      const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : undefined;
+
+      if (!firstSheet) {
+        toast.error('The selected file does not contain a worksheet.');
+        return;
+      }
+
+      const rows = XLSX.utils.sheet_to_json<SpreadsheetRow>(firstSheet, { defval: '', raw: false });
+      const importedRows = rows.map(mapSpreadsheetRowToInventory).filter((row): row is InventoryRow => Boolean(row));
+
+      if (importedRows.length === 0) {
+        toast.error('No inventory rows found. Include a Medicine Name or Item Name column.');
+        return;
+      }
+
+      const savedRows: InventoryRow[] = [];
+      for (const row of importedRows) {
+        const saved = await saveInventoryRecord(row);
+        savedRows.push(saved as InventoryRow);
+      }
+
+      setItems((current) => [...savedRows, ...current]);
+      await addLog({
+        medicine: `${savedRows.length} imported item${savedRows.length === 1 ? '' : 's'}`,
+        action: 'Excel Upload',
+        qty: savedRows.reduce((sum, row) => sum + row.stock, 0),
+        notes: file.name,
+      });
+      toast.success(`${savedRows.length} inventory item${savedRows.length === 1 ? '' : 's'} uploaded`);
+    } catch {
+      toast.error('Unable to read the Excel file.');
+    } finally {
+      setIsUploadingInventory(false);
+      event.target.value = '';
+    }
   }
 
   async function handleAddMedicine(e?: React.FormEvent) {
@@ -249,6 +363,16 @@ export default function Inventory() {
         <button type="button" className="primary-button" onClick={() => setShowNewItemForm(true)}>
           <PlusCircle size={18} /> Add New Item
         </button>
+        <button type="button" className="secondary-button" onClick={() => fileInputRef.current?.click()} disabled={isUploadingInventory}>
+          <Upload size={18} /> {isUploadingInventory ? 'Uploading...' : 'Upload Excel'}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          onChange={handleInventoryFileUpload}
+          style={{ display: 'none' }}
+        />
         <button type="button" className="secondary-button" onClick={() => setShowNewItemForm((prev) => !prev)}>
           {showNewItemForm ? 'Hide' : 'Manage'} Items
         </button>

@@ -87,23 +87,23 @@ export default function MedicalDocuments() {
     }
   };
 
-  const downloadSummary = (document: MedicalDocumentRecord) => {
+  const downloadSummary = (medicalDocument: MedicalDocumentRecord) => {
     const content = [
       'CCD School Clinic - Medical Document Record',
-      `Student ID: ${document.studentId}`,
-      `Student Name: ${document.studentName}`,
-      `Year/Program: ${document.yearLevel} - ${document.program}`,
-      `Document Type: ${document.documentType}`,
-      `Document Date: ${formatDate(document.documentDate)}`,
-      `File Name: ${document.fileName}`,
-      `Remarks: ${document.remarks || '-'}`,
+      `Student ID: ${medicalDocument.studentId}`,
+      `Student Name: ${medicalDocument.studentName}`,
+      `Year/Program: ${medicalDocument.yearLevel} - ${medicalDocument.program}`,
+      `Document Type: ${medicalDocument.documentType}`,
+      `Document Date: ${formatDate(medicalDocument.documentDate)}`,
+      `File Name: ${medicalDocument.fileName}`,
+      `Remarks: ${medicalDocument.remarks || '-'}`,
     ].join('\n');
 
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${document.studentId}-${document.documentType}.txt`;
+    link.download = `${medicalDocument.studentId}-${medicalDocument.documentType}.txt`;
     link.click();
     URL.revokeObjectURL(url);
   };

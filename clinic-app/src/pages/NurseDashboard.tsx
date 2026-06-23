@@ -10,8 +10,7 @@ import { useEffect, useState, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
 import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
-import logoImg from '../assets/logo.png';
-import backgroundImg from '../assets/background.png';
+import backgroundImg from '../assets/hero.png';
 
 function NurseDashboard() {
   const navigate = useNavigate();
