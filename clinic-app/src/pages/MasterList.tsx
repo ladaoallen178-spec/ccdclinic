@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, RefreshCcw, Search, Printer } from 'lucide-react';
-import { getStudents } from '../utils/clinicData';
-import type { StudentRecord } from '../utils/clinicData';
-import { loadStudents } from '../services/clinicRecords';
+import { Download, FileText, RefreshCcw, Search, Printer } from 'lucide-react';
+import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
+import { getStudents, getVisits } from '../utils/clinicData';
+import type { StudentRecord, VisitRecord } from '../utils/clinicData';
+import { loadStudents, loadVisits } from '../services/clinicRecords';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -14,12 +15,19 @@ const createCsv = (rows: string[][]) => rows.map((row) => row.map((cell) => `"${
 
 export default function MasterList() {
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
+  const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
   const [yearFilter, setYearFilter] = useState('All Years');
   const [programFilter, setProgramFilter] = useState('All Programs');
   const [searchTerm, setSearchTerm] = useState('');
+  const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadStudents().then(setStudents).catch(() => undefined);
+    Promise.all([loadStudents(), loadVisits()])
+      .then(([nextStudents, nextVisits]) => {
+        setStudents(nextStudents);
+        setVisits(nextVisits);
+      })
+      .catch(() => undefined);
   }, []);
 
   const availableYearLevels = useMemo(
@@ -61,6 +69,11 @@ export default function MasterList() {
 
     return summary;
   }, [students]);
+  const historyStudent = students.find((student) => student.id === historyStudentId) ?? null;
+  const studentVisits = useMemo(
+    () => visits.filter((visit) => (visit.patientType || visit.category || '').toLowerCase() === 'student'),
+    [visits],
+  );
 
   const handleReset = () => {
     setYearFilter('All Years');
@@ -132,6 +145,10 @@ export default function MasterList() {
     printWindow.focus();
     printWindow.print();
   };
+
+  if (historyStudent) {
+    return <MedicalHistoryRecord type="Student" record={historyStudent} visits={studentVisits} onBack={() => setHistoryStudentId(null)} />;
+  }
 
   return (
     <div className="page-content">
@@ -245,8 +262,9 @@ export default function MasterList() {
                   <td>{student.parentPhone || '-'}</td>
                   <td>{formatDate(student.createdAt)}</td>
                   <td>
-                    <button type="button" className="history-button" onClick={() => alert('History feature coming soon')}>
-                      History
+                    <button type="button" className="history-button" onClick={() => setHistoryStudentId(student.id)}>
+                      <FileText size={15} aria-hidden="true" />
+                      View History
                     </button>
                   </td>
                 </tr>

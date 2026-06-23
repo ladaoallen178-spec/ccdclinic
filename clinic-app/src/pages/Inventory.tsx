@@ -94,6 +94,7 @@ export default function Inventory() {
   const [supplier, setSupplier] = useState('');
   const [location, setLocation] = useState('');
   const [remarks, setRemarks] = useState('');
+  const [showNewItemForm, setShowNewItemForm] = useState(true);
 
   useEffect(() => {
     const minimal = items.map((it) => ({ name: it.name, stock: it.stock, status: it.status || (it.stock > 0 ? 'In Stock' : 'Out of Stock'), id: it.id }));
@@ -244,7 +245,16 @@ export default function Inventory() {
         </div>
       </header>
 
-      <section className="inventory-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <section className="inventory-actions">
+        <button type="button" className="primary-button" onClick={() => setShowNewItemForm(true)}>
+          <PlusCircle size={18} /> Add New Item
+        </button>
+        <button type="button" className="secondary-button" onClick={() => setShowNewItemForm((prev) => !prev)}>
+          {showNewItemForm ? 'Hide' : 'Manage'} Items
+        </button>
+      </section>
+
+      <section className="inventory-stats">
         <article className="panel" style={{ textAlign: 'center', padding: 20 }}>
           <strong style={{ fontSize: '2rem', color: '#05351b' }}>{stats.totalTypes}</strong>
           <p style={{ margin: '8px 0 0', color: '#6b7280' }}>Total Medicine Types</p>
@@ -263,9 +273,10 @@ export default function Inventory() {
         </article>
       </section>
 
-      <article className="panel" style={{ display: 'grid', gap: 18 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 18 }}>
-          <form className="entry-form" onSubmit={handleAddMedicine}>
+      {showNewItemForm && (
+        <article className="panel" style={{ display: 'grid', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: 18 }}>
+            <form className="entry-form" onSubmit={handleAddMedicine}>
             <h2 style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 12, borderBottom: '2px solid #e5e7eb', fontSize: '1.35rem', marginTop: 0 }}>
               <PlusCircle size={20} /> Add New Medicine to Inventory
             </h2>
@@ -443,7 +454,9 @@ export default function Inventory() {
             </tbody>
           </table>
         </section>
-      </article>
+        </article>
+      )}
     </section>
   );
 }
+

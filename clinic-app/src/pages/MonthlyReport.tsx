@@ -241,7 +241,7 @@ export default function MonthlyReport() {
                 </tr>
               </thead>
               <tbody>
-                {CONDITION_LIST.map((cond) => (
+                {CONDITION_LIST.filter((cond) => (metrics.conditionCounts[cond] ?? 0) > 0).map((cond) => (
                   <tr key={cond}>
                     <td style={{ border: '1px solid #000', padding: 8 }}>{cond}</td>
                     <td style={{ border: '1px solid #000', padding: 8, textAlign: 'center' }}>{metrics.conditionCounts[cond] ?? 0}</td>

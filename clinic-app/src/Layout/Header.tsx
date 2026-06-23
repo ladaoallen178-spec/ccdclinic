@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Menu, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import styles from '../styles/components/Header.module.css';
 
-interface HeaderProps {
-  onMenuClick: () => void;
-}
-
-const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+const Header: React.FC = () => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [dayOfWeek, setDayOfWeek] = useState('');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
     const updateDateTime = () => {
       const now = new Date();
+      const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+      setDayOfWeek(dayName);
       setCurrentDate(now.toLocaleDateString('en-US', { 
-        weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 
@@ -36,9 +34,6 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   return (
     <div className={styles.header}>
       <div className={styles.pageTitle}>
-        <button className={styles.menuBtn} onClick={onMenuClick}>
-          <Menu size={24} />
-        </button>
         <div className={styles.logoWrap}>
           <img src="/images/logo.png" alt="CCD Logo" className={styles.dashboardLogo} />
           <div className={styles.logoTextGroup}>
@@ -50,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
       
       <div className={styles.userInfo}>
         <div className={styles.datetimeContainer}>
-          <div className={styles.currentDate}>{currentDate}</div>
+          <div className={styles.currentDate}>{dayOfWeek}, {currentDate}</div>
           <div className={styles.currentTime}>{currentTime}</div>
         </div>
         <span className={styles.userName}>{user.fullname || 'User'}</span>

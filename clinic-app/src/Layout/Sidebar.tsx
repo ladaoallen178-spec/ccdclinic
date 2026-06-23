@@ -2,7 +2,6 @@ import {
   Calculator,
   ClipboardList,
   FileBarChart,
-  FileText,
   FolderOpen,
   Home,
   LogOut,
@@ -11,13 +10,20 @@ import {
   QrCode,
   UserPlus,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
 import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
 
-function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onCollapse: () => void;
+}
+
+function Sidebar({ collapsed, onCollapse }: SidebarProps) {
   const navigate = useNavigate();
   const [clinicStats, setClinicStats] = useState(getClinicStats);
 
@@ -55,11 +61,15 @@ function Sidebar() {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'sidebarCollapsed' : ''}`}>
       <div className="brand">
-        <img src="/images/ccd-seal.png" alt="CCD Clinic logo" />
-        <strong>CCD Clinic</strong>
-        <span>Health Services</span>
+        <img src="/images/logo.png" alt="CCD Clinic logo" />
+        {!collapsed && (
+          <>
+            <strong>CCD Clinic</strong>
+            <span>Health Services</span>
+          </>
+        )}
       </div>
       <nav>
         {links.map(({ to, label, icon: Icon, badge }) => (
@@ -72,7 +82,7 @@ function Sidebar() {
       </nav>
       <button className="logout-link" type="button" onClick={handleLogout}>
         <LogOut size={19} />
-        Logout
+        {!collapsed && 'Logout'}
       </button>
     </aside>
   );

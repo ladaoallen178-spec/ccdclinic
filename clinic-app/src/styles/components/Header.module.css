@@ -1,133 +1,157 @@
 .header {
-  background: var(--white);
-  border-radius: 15px;
-  padding: 15px 25px;
-  margin-bottom: 25px;
+  position: relative;
+  z-index: 10002 !important;
+  pointer-events: auto !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbf8 100%);
+  border-radius: 16px;
+  padding: 18px 28px;
+  margin-bottom: 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 12px 28px rgba(13, 93, 41, 0.08);
+  border: 1px solid rgba(13, 93, 41, 0.06);
+  transition: all 0.3s ease;
+}
+
+
+.header:hover {
+  box-shadow: 0 16px 36px rgba(13, 93, 41, 0.12);
 }
 
 .pageTitle {
+  position: relative;
+  z-index: 10003 !important;
+  pointer-events: auto !important;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 18px;
 }
 
 .logoWrap {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .dashboardLogo {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid rgba(26, 71, 42, 0.15);
-  background: #fff;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 2px solid rgba(13, 93, 41, 0.12);
+  background: linear-gradient(135deg, #f0f8f4 0%, #ffffff 100%);
+  padding: 4px;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
+
+.header:hover .dashboardLogo {
+  border-color: rgba(13, 93, 41, 0.25);
+  box-shadow: 0 6px 12px rgba(13, 93, 41, 0.1);
 }
 
 .logoTextGroup {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .logoTextGroup h2 {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
   margin: 0;
-  color: var(--primary);
+  color: #0d5d29;
+  letter-spacing: -0.3px;
 }
 
 .logoSubtitle {
-  font-size: 12px;
-  color: var(--secondary);
-  letter-spacing: 0.4px;
+  font-size: 13px;
+  color: #5b6b6a;
+  letter-spacing: 0.3px;
+  font-weight: 500;
 }
 
 .pageTitle h2 {
   font-size: 24px;
   font-weight: 600;
-  color: var(--primary);
+  color: #0d5d29;
 }
 
-.menuBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border-radius: 8px;
-  transition: var(--transition);
-  color: var(--primary);
-}
-
-.menuBtn:hover {
-  background: var(--gray-light);
-}
 
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 18px;
 }
 
 .datetimeContainer {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  padding: 8px 20px;
-  border-radius: 12px;
-  text-align: right;
+  background: linear-gradient(135deg, #0d5d29 0%, #1d7d44 100%);
+  padding: 12px 24px;
+  border-radius: 14px;
+  text-align: center;
+  box-shadow: 0 8px 16px rgba(13, 93, 41, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-width: 200px;
 }
 
 .currentDate {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.5px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  font-weight: 600;
 }
 
 .currentTime {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 1px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffc517;
+  letter-spacing: 0.5px;
 }
 
 .userName {
-  font-weight: 600;
-  color: var(--primary);
-  font-size: 14px;
+  font-weight: 700;
+  color: #0d5d29;
+  font-size: 15px;
 }
 
 .roleBadge {
-  background: #e8f5e9;
-  color: var(--primary);
-  padding: 5px 12px;
+  background: linear-gradient(135deg, rgba(13, 93, 41, 0.08) 0%, rgba(13, 93, 41, 0.05) 100%);
+  color: #0d5d29;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid rgba(13, 93, 41, 0.15);
+  letter-spacing: 0.3px;
+  text-transform: capitalize;
 }
 
 .userAvatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  background: linear-gradient(135deg, #0d5d29 0%, #1d7d44 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  box-shadow: 0 6px 12px rgba(13, 93, 41, 0.2);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.header:hover .userAvatar {
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(13, 93, 41, 0.25);
 }
 
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-    gap: 15px;
+    gap: 18px;
     text-align: center;
+    padding: 16px 20px;
   }
   
   .pageTitle {
@@ -138,9 +162,11 @@
   .userInfo {
     justify-content: center;
     flex-wrap: wrap;
+    width: 100%;
   }
   
   .datetimeContainer {
     text-align: center;
+    min-width: auto;
   }
 }

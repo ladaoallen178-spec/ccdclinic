@@ -5,7 +5,7 @@
   padding: 24px;
   overflow: hidden;
   color: #ffffff;
-  background: transparent;
+  background: rgba(4, 49, 13, 0.16);
 }
 
 .wrapper {
@@ -15,9 +15,9 @@
   width: min(800px, 94vw);
   min-height: 470px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.76);
   border-radius: 8px;
-  background: rgba(4, 49, 13, 0.36);
+  background: rgba(4, 49, 13, 0.26);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.38);
 }
 

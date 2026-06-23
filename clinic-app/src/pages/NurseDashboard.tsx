@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
 import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
 import logoImg from '../assets/logo.png';
-import heroImg from '../assets/hero.png';
+import backgroundImg from '../assets/background.png';
 
 function NurseDashboard() {
   const navigate = useNavigate();
@@ -47,29 +47,8 @@ function NurseDashboard() {
   return (
     <div
       className="dashboard-page dashboard-shell nurse-dashboard-shell"
-      style={{ '--dashboard-bg': `url(${heroImg})` } as CSSProperties}
+      style={{ '--dashboard-bg': `url(${backgroundImg})` } as CSSProperties}
     >
-      <header className="dashboard-header-large">
-        <div className="logo-container">
-          <img src={logoImg} className="clinic-logo" alt="CCD Logo" />
-        </div>
-
-        <div className="header-title">
-          <h1>Dashboard</h1>
-          <div className="header-subtitle">Welcome back — overview of clinic activity</div>
-        </div>
-
-        <div className="header-right">
-          <div className="date-card">
-            <div style={{fontSize: '0.85rem'}}>Monday, June 22, 2026</div>
-            <div style={{fontSize: '1.6rem', color: '#ffc517', fontWeight: 900}}>1:38 PM</div>
-          </div>
-          <div style={{marginLeft: 18, textAlign: 'right'}}>
-            <div style={{fontWeight: 800}}>Master Admin</div>
-            <div className="role-badge">admin</div>
-          </div>
-        </div>
-      </header>
       <div className="dashboard-floaters">
         <span className="float-bubble bubble-a"></span>
         <span className="float-bubble bubble-b"></span>
