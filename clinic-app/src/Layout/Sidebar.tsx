@@ -56,7 +56,7 @@ function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="brand">
-        <img src="/images/logo.png" alt="CCD Clinic logo" />
+        <img src="/images/logo.svg" alt="CCD Clinic logo" />
         <strong>CCD Clinic</strong>
         <span>Health Services</span>
       </div>

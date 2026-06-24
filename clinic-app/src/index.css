@@ -32,8 +32,8 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--text);
-  --dashboard-bg: url('/images/background.png'), url('/images/login-bg.png');
-  background: linear-gradient(180deg, rgba(4, 49, 18, 0.25), rgba(8, 71, 27, 0.28)), url('/images/background.png');
+  --dashboard-bg: url('/images/background.svg'), url('/images/login-bg.svg');
+  background: linear-gradient(180deg, rgba(4, 49, 18, 0.25), rgba(8, 71, 27, 0.28)), url('/images/background.svg');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
