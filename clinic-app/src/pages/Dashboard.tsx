@@ -14,6 +14,11 @@ export default function Dashboard() {
   return (
     <div className="page-content dashboard-content">
       <section className="dashboard-page">
+        {/* Logo Section */}
+        <div style={{ marginBottom: '24px' }}>
+          <img src="/images/logo.svg" alt="CCD Clinic Logo" style={{ width: '60px', height: '60px' }} />
+        </div>
+        
         {/* Stats Grid */}
         <div className="stats-grid">
           {stats.map((stat, idx) => (
