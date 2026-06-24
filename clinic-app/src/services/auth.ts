@@ -1,5 +1,4 @@
 import api from './api';
-import { getNurses } from '../utils/clinicData';
 
 export interface LoginResponse {
   success: boolean;
@@ -39,11 +38,6 @@ export const login = async (email: string, password: string): Promise<LoginRespo
     return { success: false, message: data.error || data.message || 'Invalid email or password.' };
   } catch (error: any) {
     console.error('[AUTH] Login error', error?.response?.data || error.message || error);
-
-    if (import.meta.env.DEV && isNetworkError(error)) {
-      return loginWithLocalSession(email, password);
-    }
-
     const msg = error.response?.data?.error || error.message || 'Network error. Please try again.';
     return { success: false, message: msg };
   }
@@ -82,54 +76,3 @@ export const isAuthenticated = () => {
     return false;
   }
 };
-
-function loginWithLocalSession(email: string, password: string): LoginResponse {
-  const normalizedEmail = email.trim().toLowerCase();
-
-  if (!normalizedEmail || !password.trim()) {
-    return { success: false, message: 'Enter your email and password.' };
-  }
-
-  const nurse = getNurses().find((item) => item.email.toLowerCase() === normalizedEmail);
-  const user = nurse
-    ? {
-        id: nurse.id,
-        fullname: nurse.name,
-        email: nurse.email,
-        role: nurse.role,
-      }
-    : {
-        id: `LOCAL-${Date.now()}`,
-        fullname: normalizedEmail.split('@')[0] || 'Local User',
-        email: normalizedEmail,
-        role: 'Nurse',
-      };
-  const token = createLocalJwt(user.id, user.email);
-
-  localStorage.setItem('token', token);
-  localStorage.setItem('user', JSON.stringify(user));
-  return {
-    success: true,
-    message: 'Using local testing session because the backend is offline.',
-    token,
-    user,
-  };
-}
-
-function createLocalJwt(userId: string, email: string) {
-  const header = toBase64Url({ alg: 'none', typ: 'JWT' });
-  const payload = toBase64Url({
-    sub: userId,
-    email,
-    exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60,
-  });
-  return `${header}.${payload}.local`;
-}
-
-function toBase64Url(value: Record<string, unknown>) {
-  return btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function isNetworkError(error: unknown) {
-  return error instanceof Error && /failed to fetch|network error|load failed/i.test(error.message);
-}
