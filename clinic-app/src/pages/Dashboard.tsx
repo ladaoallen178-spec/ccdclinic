@@ -15,8 +15,9 @@ export default function Dashboard() {
     <div className="page-content dashboard-content">
       <section className="dashboard-page">
         {/* Logo Section */}
-        <div style={{ marginBottom: '24px' }}>
-          <img src="/images/logo.svg" alt="CCD Clinic Logo" style={{ width: '60px', height: '60px' }} />
+        <div style={{ marginBottom: '32px', display: 'flex', alignItems: 'center' }}>
+          <img src="/images/logo.png" alt="CCD Clinic Logo" style={{ width: '60px', height: '60px', borderRadius: '8px' }} />
+          <h1 style={{ marginLeft: '16px', fontSize: '24px', fontWeight: 'bold', color: '#1a1a1a' }}>CCD Clinic</h1>
         </div>
         
         {/* Stats Grid */}
