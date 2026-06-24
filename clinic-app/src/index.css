@@ -86,7 +86,7 @@ label {
   box-shadow: 18px 0 34px rgba(2, 25, 13, 0.18);
   transform: translateX(calc(-100% + 20px));
   transition: transform 0.28s ease, box-shadow 0.28s ease;
-  z-index: 80;
+  z-index: 90;
 }
 
 .sidebar::after {
@@ -140,7 +140,7 @@ label {
   justify-content: center;
   cursor: pointer;
   transition: all 0.25s ease;
-  z-index: 10;
+  z-index: 95;
 }
 
 .sidebar-toggle-btn:hover {

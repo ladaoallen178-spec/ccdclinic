@@ -1,6 +1,6 @@
 .header {
   position: relative;
-  z-index: 10002 !important;
+  z-index: 50;
   pointer-events: auto !important;
   background: linear-gradient(135deg, #ffffff 0%, #f8fbf8 100%);
   border-radius: 16px;
@@ -21,7 +21,7 @@
 
 .pageTitle {
   position: relative;
-  z-index: 10003 !important;
+  z-index: 51;
   pointer-events: auto !important;
   display: flex;
   align-items: center;
