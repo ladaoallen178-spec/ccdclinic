@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 2,
   "buildCommand": "cd clinic-app && npm run build",
   "installCommand": "npm install",
