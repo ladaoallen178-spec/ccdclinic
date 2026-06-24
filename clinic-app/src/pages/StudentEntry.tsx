@@ -569,74 +569,76 @@ function buildReceiptHtml(visit: VisitRecord, student?: StudentRecord) {
     <title>Clinic Visit Receipt</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      body { font-family: Arial, sans-serif; margin: 24px; color: #05351b; }
-      .header { display:flex;align-items:center;gap:12px;border-bottom:1px solid #e6eef0;padding-bottom:12px;margin-bottom:18px }
-      .logo { width:64px;height:64px;object-fit:contain }
-      .title { flex:1;text-align:center;font-size:20px;font-weight:800 }
-      .meta { font-size:13px;color:#475467 }
-      .details { display:grid;grid-template-columns:150px 1fr;gap:10px 18px;margin-bottom:14px }
-      dt{font-weight:700}
-      dd{margin:0}
-      .section { background:#fbfcfd;border:1px solid #eef2f5;padding:12px;border-radius:8px;margin-bottom:14px }
-      .label{font-weight:700;color:#234f3a;margin-bottom:6px}
-      textarea{width:100%;min-height:84px;padding:8px;border:1px solid #cbd5d9;border-radius:6px;font-size:14px}
-      .presets{display:flex;gap:8px;margin-top:8px}
-      .preset{background:#e6f4ef;border:1px solid #c6e7db;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
-      .signature{display:flex;justify-content:space-between;align-items:center;margin-top:28px}
-      .sig-line{flex:1;border-top:1px solid #999;margin-right:12px;height:36px}
-      .sig-label{width:160px;text-align:center;color:#475467;font-size:13px}
-      @media print{ body{margin:8mm} .presets{display:none} textarea{border:none} }
+      body { font-family: 'Inter', system-ui, sans-serif; margin: 0; color: #0f2d17; background: #f4faf5; }
+      .page { max-width: 840px; margin: 0 auto; padding: 24px; }
+      .header { display: flex; align-items: center; gap: 18px; background: #114c24; color: #ffffff; padding: 20px 22px; border-radius: 18px; }
+      .logo { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; background: rgba(255,255,255,0.12); padding: 6px; }
+      .heading { display: flex; flex-direction: column; gap: 4px; }
+      .title { margin: 0; font-size: 1.25rem; font-weight: 800; }
+      .subtitle { margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.82); }
+      .date { margin-left: auto; font-size: 0.95rem; color: rgba(255,255,255,0.78); }
+      .details-card { margin-top: 20px; background: #ffffff; border-radius: 18px; padding: 24px; box-shadow: 0 14px 32px rgba(8, 38, 17, 0.08); }
+      .details-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 16px 24px; }
+      .detail-item { display: grid; gap: 4px; }
+      .detail-label { font-size: 0.82rem; color: #4f6d5b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+      .detail-value { margin: 0; font-size: 1rem; color: #0f2d17; font-weight: 700; }
+      .section-footer { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .footer-card { background: #f5f9f4; border: 1px solid #dce9dc; border-radius: 16px; padding: 18px; }
+      .footer-label { margin: 0 0 8px; font-size: 0.88rem; color: #234f3a; font-weight: 700; }
+      .footer-value { margin: 0; font-size: 0.95rem; color: #4b6152; line-height: 1.6; min-height: 70px; }
+      .signature-row { display: flex; justify-content: space-between; gap: 20px; margin-top: 26px; }
+      .signature-block { flex: 1; min-width: 180px; }
+      .sig-line { height: 1px; background: #cbd5e1; margin: 26px 0 8px; }
+      .sig-label { margin: 0; font-size: 0.82rem; color: #61766a; text-align: center; }
+      @media print { body { padding: 0; margin: 0; } .page { padding: 12mm; } }
     </style>
   </head>
   <body>
-    <div class="header">
-      <img src="/images/logo.png" alt="CCD Logo" class="logo" />
-      <div class="title">CCD Clinic Visit Receipt</div>
-      <div class="meta">${createdAt}</div>
-    </div>
+    <div class="page">
+      <div class="header">
+        <img src="/images/logo.png" alt="CCD Logo" class="logo" />
+        <div class="heading">
+          <p class="title">CCD Clinic</p>
+          <p class="subtitle">Student Visit Receipt</p>
+        </div>
+        <div class="date">${createdAt}</div>
+      </div>
 
-    <dl class="details">
-      <dt>Student ID</dt><dd>${id}</dd>
-      <dt>Student Name</dt><dd>${name}</dd>
-      <dt>Year/Program</dt><dd>${yearProgram}</dd>
-      <dt>Reason</dt><dd>${reason}</dd>
-      <dt>Temperature</dt><dd>${temp}</dd>
-      <dt>Blood Pressure</dt><dd>${bp}</dd>
-      <dt>Medicine</dt><dd>${medicine}</dd>
-      <dt>Referred</dt><dd>${visit.referredToHospital ? 'Yes' : 'No'}</dd>
-    </dl>
+      <div class="details-card">
+        <div class="details-grid">
+          <div class="detail-item"><span class="detail-label">Student ID</span><span class="detail-value">${id}</span></div>
+          <div class="detail-item"><span class="detail-label">Name</span><span class="detail-value">${name}</span></div>
+          <div class="detail-item"><span class="detail-label">Year / Program</span><span class="detail-value">${yearProgram}</span></div>
+          <div class="detail-item"><span class="detail-label">Reason</span><span class="detail-value">${reason}</span></div>
+          <div class="detail-item"><span class="detail-label">Temperature</span><span class="detail-value">${temp}</span></div>
+          <div class="detail-item"><span class="detail-label">Blood Pressure</span><span class="detail-value">${bp}</span></div>
+          <div class="detail-item"><span class="detail-label">Medicine</span><span class="detail-value">${medicine}</span></div>
+          <div class="detail-item"><span class="detail-label">Referred</span><span class="detail-value">${visit.referredToHospital ? 'Yes' : 'No'}</span></div>
+        </div>
 
-    <div class="section">
-      <div class="label">Nurse comments / Advice (editable)</div>
-      <textarea id="nurseComment" placeholder="Advice to go home, request to have a sleep, drink more water">Advice: </textarea>
-      <div class="presets">
-        <div class="preset" data-text="Advise to go home and rest">Advise: Go home & rest</div>
-        <div class="preset" data-text="Request to have a sleep">Request: Have a sleep</div>
-        <div class="preset" data-text="Drink more water and monitor">Drink more water</div>
+        <div class="section-footer">
+          <div class="footer-card">
+            <p class="footer-label">Nurse Notes</p>
+            <p class="footer-value">Advice: ________________________________</p>
+          </div>
+          <div class="footer-card">
+            <p class="footer-label">Actions Taken</p>
+            <p class="footer-value">${medicine === '-' ? '-' : medicine}</p>
+          </div>
+        </div>
+
+        <div class="signature-row">
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <p class="sig-label">Nurse signature</p>
+          </div>
+          <div class="signature-block">
+            <div class="sig-line"></div>
+            <p class="sig-label">Date: ${createdAt}</p>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="section">
-      <div class="label">Actions taken</div>
-      <div>${escapeHtml(visit.medicineGiven || '-')}</div>
-    </div>
-
-    <div class="signature">
-      <div style="flex:1">
-        <div class="sig-line"></div>
-        <div class="sig-label">Nurse signature</div>
-      </div>
-      <div style="width:180px;text-align:center;color:#475467">Date: ${createdAt}</div>
-    </div>
-
-    <script>
-      document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',()=>{
-        const t = document.getElementById('nurseComment');
-        if(!t) return; t.value = btn.getAttribute('data-text');
-      }));
-      // allow Enter to add a line then print
-      function prepareAndPrint(){ window.focus(); window.print(); }
-    </script>
   </body>
 </html>`;
 }

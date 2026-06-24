@@ -1315,19 +1315,26 @@ th {
   padding: 28px;
 }
 
-.bmi-calculator-card h2 {
-  color: #ffffff;
-  border-bottom-color: rgba(255, 255, 255, 0.2);
-  text-transform: uppercase;
-  font-size: 1.3rem;
-  letter-spacing: 0.5px;
+.bmi-student-card,
+.bmi-info-card,
+.bmi-records-card {
+  color: #0f2d17;
+  background: #ffffff;
 }
 
-.bmi-calculator-card p,
-.bmi-calculator-card small {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
+.bmi-student-card h2,
+.bmi-info-card h2,
+.bmi-records-card h2 {
+  color: #114c24;
+  border-bottom-color: #e5e7eb;
+}
+
+.bmi-student-card p,
+.bmi-info-card p,
+.bmi-info-card small,
+.bmi-records-card p,
+.bmi-records-card small {
+  color: #475467;
 }
 
 .bmi-calculator-card label {
@@ -2436,12 +2443,130 @@ th {
   border-bottom: 0;
 }
 
-.empty-table-cell {
-  text-align: center;
-  color: #9ca3af;
-  font-weight: 500;
-  padding: 32px 14px !important;
-}
+  @media print {
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: #0f2d17;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .sidebar,
+    .app-main .header,
+    .topbar,
+    .topbar-status,
+    .history-action-row,
+    .history-back-button,
+    .history-print-button,
+    .history-dashboard-button {
+      display: none !important;
+    }
+
+    .history-record-page {
+      gap: 16px;
+      width: auto;
+      margin: 0;
+      padding: 16px;
+      background: #ffffff;
+    }
+
+    .history-record-banner {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      min-height: auto;
+      color: #0f2d17;
+    }
+
+    .history-record-brand {
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .history-record-brand img {
+      width: 52px;
+      height: 52px;
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+
+    .history-record-brand strong {
+      color: #0f2d17;
+      font-size: 1.35rem;
+    }
+
+    .history-record-brand span {
+      color: #4b5563;
+      font-size: 0.95rem;
+    }
+
+    .history-profile-card,
+    .history-table-card {
+      box-shadow: none;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      page-break-inside: avoid;
+    }
+
+    .history-profile-card {
+      padding: 20px;
+    }
+
+    .history-profile-grid {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .history-record-table {
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+
+    .history-record-table th,
+    .history-record-table td {
+      padding: 12px 10px;
+      border: 1px solid #d1d5db;
+    }
+
+    .history-record-table th {
+      background: #0f2d17;
+      color: #ffffff;
+    }
+
+    .history-record-table td {
+      background: #ffffff;
+    }
+
+    .history-detail strong {
+      color: #0f2d17;
+    }
+
+    .history-detail {
+      color: #334155;
+    }
+
+    .history-record-banner,
+    .history-profile-card,
+    .history-table-card {
+      page-break-before: avoid;
+      page-break-after: avoid;
+    }
+  }
+
+  .empty-table-cell {
+    text-align: center;
+    color: #9ca3af;
+    font-weight: 500;
+    padding: 32px 14px !important;
+  }
 
 .fake-qr {
   display: grid;
