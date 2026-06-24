@@ -7,10 +7,7 @@
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ],
-  "build": {
-    "env": {
-      "VITE_BASE": "/",
-      "VITE_API_URL": ""
-    }
+  "env": {
+    "VITE_API_URL": ""
   }
 }
