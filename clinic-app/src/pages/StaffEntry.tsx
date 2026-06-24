@@ -589,7 +589,7 @@ function buildReceiptHtml(visit: VisitRecord, staff?: StaffRecord) {
   </head>
   <body>
     <div class="header">
-      <img src="/images/ccd-logo.svg" alt="CCD Logo" class="logo" />
+      <img src="/images/logo.png" alt="CCD Logo" class="logo" />
       <div class="title">CCD Clinic Staff Visit Receipt</div>
       <div class="meta">${createdAt}</div>
     </div>

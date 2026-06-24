@@ -44,7 +44,7 @@ const Login: React.FC = () => {
           <div className={styles.logoArea}>
             <div className={styles.logoIcon}>
               <img
-                src="/images/logo.svg"
+                src="/images/logo.png"
                 alt="College of Davao Logo"
                 className={styles.logoImage}
               />
