@@ -2177,35 +2177,41 @@ th {
 
 .history-record-page {
   display: grid;
-  gap: 20px;
-  width: min(1084px, 100%);
+  gap: 24px;
+  width: min(1120px, 100%);
   margin-inline: auto;
+  padding: 20px;
 }
 
 .history-record-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 22px;
-  min-height: 79px;
-  padding: 16px 22px;
-  border-radius: 12px;
+  gap: 28px;
+  min-height: 90px;
+  padding: 20px 28px;
+  border-radius: 14px;
   color: #ffffff;
-  background: #1f5818;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  background: linear-gradient(135deg, #1b5a28 0%, #0d4620 100%);
+  box-shadow: 0 12px 32px rgba(13, 93, 41, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .history-record-brand {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 16px;
+  flex: 1;
 }
 
 .history-record-brand img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
   object-fit: contain;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .history-record-brand strong,
@@ -2215,70 +2221,84 @@ th {
 
 .history-record-brand strong {
   color: #ffffff;
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   font-weight: 900;
+  letter-spacing: -0.3px;
 }
 
 .history-record-brand span {
-  margin-top: 4px;
-  color: #eef6ea;
-  font-size: 0.68rem;
-  font-weight: 700;
+  margin-top: 3px;
+  color: #e8f5e9;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .history-back-button {
-  min-height: 34px;
-  padding: 8px 13px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.17);
-  font-size: 0.78rem;
+  min-height: 40px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .history-back-button:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .history-profile-card {
   display: grid;
-  gap: 18px;
-  padding: 24px 26px 22px;
-  border-left: 4px solid #285315;
-  border-radius: 12px;
+  gap: 22px;
+  padding: 28px 32px;
+  border-left: 5px solid #1b5a28;
+  border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 9px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(13, 93, 41, 0.1);
+  border-top: 1px solid rgba(13, 93, 41, 0.05);
 }
 
 .history-profile-card h2 {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  color: #285315;
-  font-size: 1.45rem;
-  font-weight: 500;
+  color: #1b5a28;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
 }
 
 .history-profile-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(170px, 1fr));
-  gap: 18px 28px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px 28px;
   align-items: center;
 }
 
 .history-detail {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   min-width: 0;
-  color: #344054;
-  font-size: 0.82rem;
-  line-height: 1.35;
+  color: #374151;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .history-detail svg,
 .history-profile-card h2 svg {
   flex: 0 0 auto;
-  color: #285315;
+  color: #1b5a28;
 }
 
 .history-detail span {
@@ -2322,38 +2342,55 @@ th {
 .history-action-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
+  align-items: center;
 }
 
 .history-print-button,
 .history-dashboard-button {
-  min-height: 37px;
-  padding: 9px 20px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  min-height: 42px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .history-print-button {
-  background: #1fb148;
+  background: linear-gradient(135deg, #1fb148 0%, #16a142 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(31, 177, 72, 0.25);
 }
 
 .history-print-button:hover {
-  background: #178c39;
+  background: linear-gradient(135deg, #16a142 0%, #0f8a38 100%);
+  box-shadow: 0 8px 20px rgba(31, 177, 72, 0.35);
+  transform: translateY(-2px);
 }
 
 .history-dashboard-button {
-  background: #687480;
+  background: linear-gradient(135deg, #687480 0%, #5a6670 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(104, 116, 128, 0.2);
 }
 
 .history-dashboard-button:hover {
-  background: #535d67;
+  background: linear-gradient(135deg, #5a6670 0%, #4d5661 100%);
+  box-shadow: 0 8px 20px rgba(104, 116, 128, 0.3);
+  transform: translateY(-2px);
 }
 
 .history-table-card {
   overflow-x: auto;
-  border-radius: 11px;
+  border-radius: 12px;
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(13, 93, 41, 0.1);
+  border: 1px solid rgba(13, 93, 41, 0.05);
 }
 
 .history-record-table {
@@ -2361,35 +2398,49 @@ th {
   margin-top: 0;
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
 }
 
 .history-record-table th {
-  padding: 14px 13px;
+  padding: 16px 14px;
   color: #ffffff;
-  background: #285315;
-  font-size: 0.86rem;
-  font-weight: 900;
+  background: linear-gradient(135deg, #1b5a28 0%, #0d4620 100%);
+  font-size: 0.9rem;
+  font-weight: 800;
   text-transform: none;
+  letter-spacing: 0.3px;
+  text-align: left;
 }
 
 .history-record-table th:first-child {
-  border-top-left-radius: 10px;
+  border-top-left-radius: 12px;
 }
 
 .history-record-table th:last-child {
-  border-top-right-radius: 10px;
+  border-top-right-radius: 12px;
 }
 
 .history-record-table td {
-  padding: 13px;
-  color: #050b16;
+  padding: 16px 14px;
+  color: #374151;
   background: #ffffff;
-  font-size: 0.86rem;
-  border-bottom: 1px solid #edf0f3;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.history-record-table tbody tr:hover td {
+  background: #f9fafb;
 }
 
 .history-record-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.empty-table-cell {
+  text-align: center;
+  color: #9ca3af;
+  font-weight: 500;
+  padding: 32px 14px !important;
 }
 
 .fake-qr {

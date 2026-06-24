@@ -25,7 +25,7 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
     <section className="history-record-page">
       <header className="history-record-banner">
         <div className="history-record-brand">
-          <img src="/favicon.svg" alt="CCD Clinic" />
+          <img src="/images/logo.png" alt="CCD Clinic" />
           <div>
             <strong>{type} Medical History</strong>
             <span>
