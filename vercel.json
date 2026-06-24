@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd clinic-app && chmod +x node_modules/.bin/* 2>/dev/null || true && npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "cd clinic-app && npm run build",
+  "installCommand": "npm install && cd clinic-app && npm install",
   "outputDirectory": "clinic-app/dist"
 }
