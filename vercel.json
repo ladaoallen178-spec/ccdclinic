@@ -1,11 +1,9 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "clinic-app/package.json", "use": "@vercel/static-build" }
-  ],
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/.*", "dest": "/index.html" }
+  "version": 3,
+  "buildCommand": "cd clinic-app && npm install && npm run build",
+  "outputDirectory": "clinic-app/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "env": {
     "VITE_API_URL": ""
