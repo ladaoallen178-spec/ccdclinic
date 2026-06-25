@@ -3,7 +3,7 @@ use argon2::{
     Argon2,
 };
 use axum::{
-    extract::State,
+    extract::Extension,
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -80,7 +80,7 @@ struct UserRecord {
 }
 
 pub async fn register(
-    State(state): State<AppState>,
+    Extension(state): Extension<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     let email = payload.email.trim().to_lowercase();
@@ -149,7 +149,7 @@ pub async fn register(
 }
 
 pub async fn login(
-    State(state): State<AppState>,
+    Extension(state): Extension<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> impl IntoResponse {
     let email = payload.email.trim().to_lowercase();

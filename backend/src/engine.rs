@@ -22,7 +22,8 @@ use axum::http::HeaderValue;
 use std::path::PathBuf;
 use mime_guess;
 use db::init_db_pool;
-use routes::auth::{auth_routes, AppState};
+use routes::auth::auth_routes;
+use api::auth::AppState;
 use limiters::{ConcurrencyLimiter, enforce_concurrency};
 
 
@@ -83,8 +84,7 @@ async fn main() {
     };
 
     let api = auth_routes()
-        .with_state(state)
-        .layer(Extension(db_pool))
+        .layer(Extension(state))
         .layer(middleware::from_fn(move |req, next| {
             enforce_concurrency(limiter.clone(), req, next)
         }))
@@ -129,6 +129,7 @@ async fn main() {
         // API routes first so they are reachable at /register and /login
         .merge(api)
         .route("/healthz", get(|| async { Json(json!({ "status": "ok" })) }))
+        .route("/debug/users", get(debug_users))
         // Serve static asset folders at their expected paths
         .nest_service("/assets", ServeDir::new("public/assets"))
         .nest_service("/images", ServeDir::new("public/images"))
@@ -152,5 +153,32 @@ async fn main() {
     println!("Server running on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    tracing::info!("Server listening on http://{}", addr);
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .unwrap();
+}
+
+async fn debug_users(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users").fetch_one(&state.db).await {
+        Ok(count) => Json(json!({
+            "users_table_exists": true,
+            "users_count": count,
+        }))
+        .into_response(),
+        Err(err) => {
+            tracing::error!(error = ?err, "Debug DB query failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": "Unable to query users table",
+                    "details": err.to_string(),
+                })),
+            )
+                .into_response()
+        }
+    }
 }
