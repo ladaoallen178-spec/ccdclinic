@@ -4,12 +4,19 @@ pub mod db;
 pub mod limiters;
 pub mod security;
 
-use axum::{http::{Method, StatusCode}, middleware, Extension, Router, routing::get};
+use axum::{
+    extract::Extension,
+    http::{Method, StatusCode},
+    middleware,
+    response::{IntoResponse, Html},
+    routing::get,
+    Json, Router,
+};
 use dotenvy::dotenv;
+use serde_json::json;
 use std::env;
 
 use tower_http::{cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
-use axum::response::{IntoResponse, Html};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
 use std::path::PathBuf;
@@ -63,7 +70,13 @@ async fn main() {
 
     let db_pool = init_db_pool().await;
 
-    let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "default_secret_key_change_me_in_production".to_string());
+    let jwt_secret = match env::var("JWT_SECRET") {
+        Ok(secret) if !secret.trim().is_empty() => secret,
+        _ => {
+            tracing::error!("JWT_SECRET is not set or empty. Using insecure default secret.");
+            "default_secret_key_change_me_in_production".to_string()
+        }
+    };
     let state = AppState {
         db: db_pool.clone(),
         jwt_secret,
@@ -115,6 +128,7 @@ async fn main() {
     let app = Router::new()
         // API routes first so they are reachable at /register and /login
         .merge(api)
+        .route("/healthz", get(|| async { Json(json!({ "status": "ok" })) }))
         // Serve static asset folders at their expected paths
         .nest_service("/assets", ServeDir::new("public/assets"))
         .nest_service("/images", ServeDir::new("public/images"))

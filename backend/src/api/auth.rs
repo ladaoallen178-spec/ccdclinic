@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use tracing::{error, info};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::thread_rng;
@@ -154,6 +155,8 @@ pub async fn login(
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim();
 
+    info!(email = %email, "Auth login attempt");
+
     if email.is_empty() || password.is_empty() {
         return error_response(StatusCode::BAD_REQUEST, "Email and password are required.");
     }
@@ -167,16 +170,26 @@ pub async fn login(
 
     let row = match row {
         Ok(Some(row)) => row,
-        Ok(None) => return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password."),
-        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to query user."),
+        Ok(None) => {
+            info!(email = %email, "Auth login failed: user not found");
+            return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
+        }
+        Err(err) => {
+            error!(email = %email, error = ?err, "Auth login failed: unable to query user");
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to query user.");
+        }
     };
 
     let password_hash = match PasswordHash::new(&row.password_hash) {
         Ok(hash) => hash,
-        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Stored password is invalid."),
+        Err(err) => {
+            error!(email = %email, error = ?err, "Auth login failed: stored password hash invalid");
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Stored password is invalid.");
+        }
     };
 
     if Argon2::default().verify_password(password.as_bytes(), &password_hash).is_err() {
+        info!(email = %email, "Auth login failed: invalid password");
         return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
     }
 
@@ -197,7 +210,10 @@ pub async fn login(
             };
             (StatusCode::OK, Json(response)).into_response()
         }
-        Err(_) => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate auth token."),
+        Err(err) => {
+            error!(email = %email, error = ?err, "Auth login failed: JWT token creation failed");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate auth token.")
+        }
     }
 }
 
