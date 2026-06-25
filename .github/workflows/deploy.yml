@@ -1,0 +1,37 @@
+name: Deploy to Render & Vercel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-render:
+    runs-on: ubuntu-latest
+    name: Deploy Backend to Render
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Render Deployment
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_DEPLOY_KEY }}
+        env:
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          RENDER_DEPLOY_KEY: ${{ secrets.RENDER_DEPLOY_KEY }}
+
+  deploy-vercel:
+    runs-on: ubuntu-latest
+    name: Deploy Frontend to Vercel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Vercel Deployment
+        run: |
+          curl -X POST "https://api.vercel.com/v12/deployments?teamId=${{ secrets.VERCEL_TEAM_ID }}" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"schoolclinic","gitSource":{"ref":"main","repoId":"${{ secrets.VERCEL_REPO_ID }}"}}'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_REPO_ID: ${{ secrets.VERCEL_REPO_ID }}

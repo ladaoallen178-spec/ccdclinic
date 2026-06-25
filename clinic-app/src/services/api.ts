@@ -1,11 +1,12 @@
-// Prefer an explicit VITE_API_URL for dev backend calls.
-// In production the app is served from the backend under the same origin.
-const API_BASE_URLS = import.meta.env.VITE_API_URL
-  ? [import.meta.env.VITE_API_URL]
+// Prefer an explicit VITE_API_URL for backend calls.
+// If not set, use localhost in dev and the current origin in production.
+const apiUrl = (import.meta.env.VITE_API_URL ?? '').trim();
+const API_BASE_URLS = apiUrl
+  ? [apiUrl]
   : import.meta.env.DEV
   ? ['http://localhost:8001']
-  : [''];
-const APP_BASE_URL = '';
+  : [typeof window !== 'undefined' ? window.location.origin : ''];
+const APP_BASE_URL = import.meta.env.VITE_BASE ?? '';
 const REQUEST_TIMEOUT_MS = 30000;
 
 interface ApiResponse<T> {

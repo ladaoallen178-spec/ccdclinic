@@ -19,7 +19,9 @@ Frontend — Vercel
    - Output Directory: leave default (static-build will detect `dist`).
 4. Environment Variables (set in Vercel dashboard → Settings → Environment Variables):
    - `VITE_BASE` = `/` (or `/ccdclinic/` if you intend to serve under that subpath)
-   - `VITE_API_URL` = `https://<your-backend-url>` OR leave empty to use relative API calls (recommended when backend is on a separate host, set to its full URL)
+   - `VITE_API_URL` = `https://<your-render-backend-url>` if your backend is hosted on Render.
+     - If you host only the backend container on Render and the frontend on Vercel, this must be the Render service URL.
+     - If you deploy the backend and frontend together from the same origin, `VITE_API_URL` may be left empty.
 5. Deploy. Vercel will run the build and publish the static `dist/` generated from `clinic-app`.
 
 Backend — Render

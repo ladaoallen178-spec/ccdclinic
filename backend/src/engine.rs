@@ -8,7 +8,7 @@ use axum::{http::{Method, StatusCode}, middleware, Extension, Router, routing::g
 use dotenvy::dotenv;
 use std::env;
 
-use tower_http::{cors::{CorsLayer}, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use tower_http::{cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use axum::response::{IntoResponse, Html};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
@@ -24,30 +24,42 @@ async fn main() {
     tracing_subscriber::fmt::init();
     dotenv().ok();
 
-    let client_origin = env::var("CLIENT_URL")
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "http://localhost:5173".to_string());
+    let client_origins = env::var("CLIENT_URL").unwrap_or_default();
     let limiter = ConcurrencyLimiter::new(5);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
-    let cors = CorsLayer::new()
-        .allow_origin(
-            client_origin
-                .parse::<axum::http::HeaderValue>()
-                .expect("CLIENT_URL must be a valid origin, like https://your-app.vercel.app")
-        )
-        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
-        .allow_headers([
-            axum::http::header::CONTENT_TYPE,
-            axum::http::header::AUTHORIZATION,
-            axum::http::header::ACCEPT,
-            axum::http::header::ACCEPT_LANGUAGE,
-            axum::http::header::ACCEPT_ENCODING,
-        ])
-        .allow_credentials(true);
+    let cors = {
+        let client_origins = client_origins
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<_>>();
+
+        if client_origins.is_empty() {
+            CorsLayer::permissive()
+        } else {
+            let mut cors = CorsLayer::new()
+                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_headers([
+                    axum::http::header::CONTENT_TYPE,
+                    axum::http::header::AUTHORIZATION,
+                    axum::http::header::ACCEPT,
+                    axum::http::header::ACCEPT_LANGUAGE,
+                    axum::http::header::ACCEPT_ENCODING,
+                ])
+                .allow_credentials(true);
+
+            for origin in client_origins {
+                cors = cors.allow_origin(
+                    HeaderValue::from_str(origin)
+                        .expect("CLIENT_URL must contain valid origins like https://your-app.vercel.app"),
+                );
+            }
+
+            cors
+        }
+    };
 
     let db_pool = init_db_pool().await;
 
