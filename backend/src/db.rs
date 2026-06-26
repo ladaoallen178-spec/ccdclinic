@@ -5,6 +5,12 @@ use tracing::{error, info};
 
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use std::str::FromStr;
+use uuid::Uuid;
+
+const DEFAULT_NURSE_EMAIL: &str = "nurse@ccd.edu";
+const DEFAULT_NURSE_NAME: &str = "Clinic Nurse Admin";
+const DEFAULT_NURSE_ROLE: &str = "Nurse";
+const DEFAULT_NURSE_HASH: &str = "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$5w4QpS2X+rL2x14P2aWn2aF1O/dM1N8bB9E/oU9l3V0";
 
 pub async fn init_db_pool() -> PgPool {
     let db_url: String = env::var("DATABASE_URL")
@@ -40,5 +46,55 @@ pub async fn init_db_pool() -> PgPool {
         }
     }
 
+    if let Err(err) = ensure_auth_schema(&pool).await {
+        error!(error = ?err, "Failed to initialize auth schema and seed user.");
+        std::process::exit(1);
+    }
+
     pool
+}
+
+async fn ensure_auth_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            full_name VARCHAR(255),
+            role VARCHAR(50) NOT NULL DEFAULT 'Nurse',
+            password_hash VARCHAR(255) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO users (id, email, full_name, role, password_hash, created_at)
+        SELECT $1, $2, $3, $4, $5, NOW()
+        WHERE NOT EXISTS (
+            SELECT 1 FROM users WHERE email = $2
+        )
+        "#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(DEFAULT_NURSE_EMAIL)
+    .bind(DEFAULT_NURSE_NAME)
+    .bind(DEFAULT_NURSE_ROLE)
+    .bind(DEFAULT_NURSE_HASH)
+    .execute(pool)
+    .await?;
+
+    info!(email = DEFAULT_NURSE_EMAIL, "Auth bootstrap completed.");
+    Ok(())
 }
