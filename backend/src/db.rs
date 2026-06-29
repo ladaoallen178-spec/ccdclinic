@@ -79,6 +79,11 @@ pub async fn init_db_pool() -> PgPool {
         std::process::exit(1);
     }
 
+    if let Err(err) = ensure_clinic_schema(&pool).await {
+        error!(error = ?err, "Failed to initialize clinic schema.");
+        std::process::exit(1);
+    }
+
     pool
 }
 
@@ -124,5 +129,121 @@ async fn ensure_auth_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
     .await?;
 
     info!(email = DEFAULT_NURSE_EMAIL, "Auth bootstrap completed.");
+    Ok(())
+}
+
+async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query(r#"CREATE EXTENSION IF NOT EXISTS "pgcrypto""#)
+        .execute(pool)
+        .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS students (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            section VARCHAR(100),
+            concern TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'Cleared' CHECK (status IN ('Pending', 'Cleared')),
+            age INTEGER,
+            gender VARCHAR(50),
+            year_level VARCHAR(50),
+            program VARCHAR(50),
+            parent_name VARCHAR(255),
+            parent_phone VARCHAR(50),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS staff (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            department VARCHAR(255),
+            concern TEXT,
+            status VARCHAR(50) NOT NULL DEFAULT 'Cleared' CHECK (status IN ('Pending', 'Cleared')),
+            age INTEGER,
+            gender VARCHAR(50),
+            staff_type VARCHAR(100),
+            position VARCHAR(100),
+            contact_number VARCHAR(50),
+            email VARCHAR(255),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS visits (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            patient_type VARCHAR(50) NOT NULL CHECK (patient_type IN ('Student', 'Staff')),
+            student_id VARCHAR(50) REFERENCES students(id) ON DELETE CASCADE,
+            staff_id VARCHAR(50) REFERENCES staff(id) ON DELETE CASCADE,
+            temperature VARCHAR(20),
+            blood_pressure VARCHAR(20),
+            referred_to_hospital BOOLEAN NOT NULL DEFAULT FALSE,
+            reason_for_visit TEXT NOT NULL,
+            medicine_given VARCHAR(255),
+            status VARCHAR(50) NOT NULL DEFAULT 'Completed',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT chk_visit_patient_reference CHECK (
+                (patient_type = 'Student' AND student_id IS NOT NULL AND staff_id IS NULL) OR
+                (patient_type = 'Staff' AND staff_id IS NOT NULL AND student_id IS NULL)
+            )
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS inventory (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(255) UNIQUE NOT NULL,
+            dosage VARCHAR(100),
+            stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+            unit VARCHAR(50) DEFAULT 'tablet',
+            status VARCHAR(50) NOT NULL DEFAULT 'Available',
+            expiry DATE,
+            supplier VARCHAR(255),
+            location VARCHAR(255),
+            remarks TEXT,
+            keywords TEXT[] DEFAULT '{}',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS inventory_logs (
+            id VARCHAR(50) PRIMARY KEY,
+            date_time TIMESTAMPTZ DEFAULT NOW(),
+            medicine VARCHAR(255),
+            action VARCHAR(255) NOT NULL,
+            qty INTEGER,
+            student_id VARCHAR(50) REFERENCES students(id) ON DELETE SET NULL,
+            student_name VARCHAR(255),
+            staff_id VARCHAR(50) REFERENCES staff(id) ON DELETE SET NULL,
+            staff_name VARCHAR(255),
+            performed_by VARCHAR(255) DEFAULT 'Master Admin',
+            notes TEXT
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    info!("Clinic schema bootstrap completed.");
     Ok(())
 }

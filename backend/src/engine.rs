@@ -22,6 +22,9 @@ use std::path::PathBuf;
 use mime_guess;
 use db::init_db_pool;
 use routes::auth::auth_routes;
+use routes::students::student_routes;
+use routes::visits::visit_routes;
+use routes::inventory::inventory_routes;
 use api::auth::AppState;
 use limiters::{ConcurrencyLimiter, enforce_concurrency};
 
@@ -37,7 +40,7 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = {
-        let mut client_origins_list: Vec<&str> = client_origins
+        let client_origins_list: Vec<&str> = client_origins
             .split(',')
             .map(str::trim)
             .filter(|value| !value.is_empty())
@@ -107,7 +110,11 @@ async fn main() {
         jwt_secret,
     };
 
-    let api = auth_routes()
+    let api = Router::new()
+        .merge(auth_routes())
+        .nest("/api/students", student_routes())
+        .nest("/api/visits", visit_routes())
+        .nest("/api/inventory", inventory_routes())
         .layer(Extension(state))
         .layer(middleware::from_fn(move |req, next| {
             enforce_concurrency(limiter.clone(), req, next)

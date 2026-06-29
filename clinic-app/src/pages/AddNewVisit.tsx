@@ -48,12 +48,8 @@ export default function AddNewVisit() {
 
     setIsSaving(true);
     try {
-      const saved = await createVisitRecord(visit);
-      setVisits([saved, ...visits]);
-
       const effectiveName = patientName || idNumber;
 
-      // Create a pending student/staff record if the patient is existing or new
       if (patientType === 'Student') {
         const existingStudent = getStudents().find(
           (student) => student.id === idNumber || student.name.toLowerCase() === effectiveName.toLowerCase(),
@@ -103,6 +99,9 @@ export default function AddNewVisit() {
             };
         await saveStaffRecord(staff);
       }
+
+      const saved = await createVisitRecord(visit);
+      setVisits([saved, ...visits]);
 
       target.reset();
       toast.success('Visit record saved');
@@ -186,7 +185,7 @@ function getSaveErrorMessage(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error) {
     const message = String((error as { message?: unknown }).message || '');
     if (message.includes('Failed to fetch')) {
-      return 'Cannot reach the backend. Start the backend server on port 8001, then try again.';
+      return 'Cannot reach the backend. Start the backend server on port 8000, then try again.';
     }
 
     if (message) {

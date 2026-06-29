@@ -23,6 +23,7 @@ import type {
   StudentRecord,
   VisitRecord,
 } from '../utils/clinicData';
+import api from './api';
 
 type InventoryRecord = InventoryItem & {
   id?: string;
@@ -64,20 +65,40 @@ type NurseRegistration = {
 
 const INVENTORY_LOG_KEY = 'clinic-inventory-log';
 
+// === STUDENTS ===
 export async function loadStudents() {
-  return getStudents();
+  try {
+    const response = await api.get('/api/students');
+    return ((response.data || []) as any[]).map(transformApiStudent);
+  } catch (error) {
+    console.warn('[loadStudents] API error, falling back to localStorage:', error);
+    return getStudents();
+  }
 }
 
 export async function saveStudentRecord(record: StudentRecord) {
-  const students = upsertById(getStudents(), record);
-  saveStudents(students);
-  return record;
+  try {
+    const response = await api.post('/api/students', toApiStudentPayload(record));
+    return transformApiStudent(response.data);
+  } catch (error) {
+    console.error('[saveStudentRecord] API error:', error);
+    const students = upsertById(getStudents(), record);
+    saveStudents(students);
+    throw error;
+  }
 }
 
 export async function deleteStudentRecord(id: string) {
-  saveStudents(getStudents().filter((student) => student.id !== id));
+  try {
+    await api.delete(`/api/students/${id}`);
+  } catch (error) {
+    console.error('[deleteStudentRecord] API error:', error);
+    // Fallback to localStorage
+    saveStudents(getStudents().filter((student) => student.id !== id));
+  }
 }
 
+// === STAFF ===
 export async function loadStaff() {
   return getStaff();
 }
@@ -92,21 +113,56 @@ export async function deleteStaffRecord(id: string) {
   saveStaff(getStaff().filter((staff) => staff.id !== id));
 }
 
+// === VISITS ===
 export async function loadVisits() {
-  return sortNewest(getVisits());
+  try {
+    const response = await api.get('/api/visits');
+    const visits = ((response.data || []) as any[]).map(transformApiVisit);
+    return sortNewest(visits);
+  } catch (error) {
+    console.warn('[loadVisits] API error, falling back to localStorage:', error);
+    return sortNewest(getVisits());
+  }
 }
 
 export async function createVisitRecord(record: VisitRecord) {
-  const visit = {
-    ...record,
-    createdAt: record.createdAt || new Date().toISOString(),
+  // Transform frontend format to backend format
+  const apiPayload = {
+    patient_type: record.patientType,
+    student_id: record.idNumber && record.patientType === 'Student' ? record.idNumber : undefined,
+    staff_id: record.idNumber && record.patientType === 'Staff' ? record.idNumber : undefined,
+    temperature: record.temperature,
+    blood_pressure: record.bloodPressure,
+    referred_to_hospital: record.referredToHospital,
+    reason_for_visit: record.reasonForVisit,
+    medicine_given: record.medicineGiven,
+    status: record.status,
   };
-  saveVisits([visit, ...getVisits()]);
-  return visit;
+
+  try {
+    const response = await api.post('/api/visits', apiPayload);
+    const apiVisit = response.data as any;
+    return transformApiVisit(apiVisit);
+  } catch (error) {
+    console.error('[createVisitRecord] API error:', error);
+    const visit = {
+      ...record,
+      createdAt: record.createdAt || new Date().toISOString(),
+    };
+    saveVisits([visit, ...getVisits()]);
+    throw error;
+  }
 }
 
+// === INVENTORY ===
 export async function loadInventory() {
-  return getInventory() as InventoryRecord[];
+  try {
+    const response = await api.get('/api/inventory');
+    return ((response.data || []) as any[]).map(transformApiInventory);
+  } catch (error) {
+    console.warn('[loadInventory] API error, falling back to localStorage:', error);
+    return getInventory() as InventoryRecord[];
+  }
 }
 
 export async function saveInventoryRecord(record: InventoryRecordInput) {
@@ -114,17 +170,40 @@ export async function saveInventoryRecord(record: InventoryRecordInput) {
     ...record,
     status: record.status || (record.stock > 0 ? 'In Stock' : 'Out of Stock'),
   };
-  const current = getInventory() as InventoryRecord[];
-  const next = current.some((item) => item.id && normalizedRecord.id && item.id === normalizedRecord.id)
-    ? current.map((item) => (item.id === normalizedRecord.id ? normalizedRecord : item))
-    : [normalizedRecord, ...current];
-  saveInventory(next);
-  return normalizedRecord;
+
+  try {
+    const response = await api.post('/api/inventory', toApiInventoryPayload(normalizedRecord));
+    return transformApiInventory(response.data);
+  } catch (error) {
+    console.error('[saveInventoryRecord] API error:', error);
+    const current = getInventory() as InventoryRecord[];
+    const next = current.some((item) => item.id && normalizedRecord.id && item.id === normalizedRecord.id)
+      ? current.map((item) => (item.id === normalizedRecord.id ? normalizedRecord : item))
+      : [normalizedRecord, ...current];
+    saveInventory(next);
+    throw error;
+  }
 }
 
 export async function deleteInventoryRecord(id: string) {
-  const current = getInventory() as InventoryRecord[];
-  saveInventory(current.filter((item) => item.id !== id));
+  try {
+    await api.delete(`/api/inventory/${id}`);
+  } catch (error) {
+    console.error('[deleteInventoryRecord] API error:', error);
+    // Fallback to localStorage
+    const current = getInventory() as InventoryRecord[];
+    saveInventory(current.filter((item) => item.id !== id));
+  }
+}
+
+export async function updateInventoryStock(id: string, newStock: number) {
+  try {
+    const response = await api.put(`/api/inventory/${id}`, { stock: newStock });
+    return response.data as InventoryRecord;
+  } catch (error) {
+    console.error('[updateInventoryStock] API error:', error);
+    throw error;
+  }
 }
 
 export async function loadInventoryLogs() {
@@ -186,6 +265,100 @@ export async function registerNurseAccount(registration: NurseRegistration) {
   };
   saveNurses([nurse, ...getNurses()]);
   return nurse;
+}
+
+// Helper function to transform API visit format to frontend format
+function transformApiVisit(apiVisit: any): VisitRecord {
+  return {
+    patientType: apiVisit.patient_type,
+    idNumber: apiVisit.student_id || apiVisit.staff_id || '',
+    temperature: apiVisit.temperature || '',
+    bloodPressure: apiVisit.blood_pressure || '',
+    referredToHospital: apiVisit.referred_to_hospital || false,
+    reasonForVisit: apiVisit.reason_for_visit || '',
+    medicineGiven: apiVisit.medicine_given || '',
+    status: apiVisit.status || 'Pending',
+    createdAt: apiVisit.created_at,
+  };
+}
+
+function transformApiStudent(apiStudent: any): StudentRecord {
+  return {
+    id: apiStudent.id || '',
+    name: apiStudent.name || '',
+    section: apiStudent.section || '',
+    concern: apiStudent.concern || '',
+    status: apiStudent.status || 'Cleared',
+    age: apiStudent.age == null ? '' : String(apiStudent.age),
+    gender: apiStudent.gender || '',
+    yearLevel: apiStudent.year_level || apiStudent.yearLevel || '',
+    program: apiStudent.program || '',
+    parentName: apiStudent.parent_name || apiStudent.parentName || '',
+    parentPhone: apiStudent.parent_phone || apiStudent.parentPhone || '',
+    createdAt: apiStudent.created_at || apiStudent.createdAt,
+  };
+}
+
+function toApiStudentPayload(record: StudentRecord) {
+  return {
+    id: record.id,
+    name: record.name,
+    section: emptyToUndefined(record.section),
+    concern: emptyToUndefined(record.concern),
+    status: record.status,
+    age: toOptionalInteger(record.age),
+    gender: emptyToUndefined(record.gender),
+    year_level: emptyToUndefined(record.yearLevel),
+    program: emptyToUndefined(record.program),
+    parent_name: emptyToUndefined(record.parentName),
+    parent_phone: emptyToUndefined(record.parentPhone),
+  };
+}
+
+function transformApiInventory(apiItem: any): InventoryRecord {
+  return {
+    id: apiItem.id,
+    name: apiItem.name || '',
+    dosage: apiItem.dosage || '',
+    stock: Number(apiItem.stock) || 0,
+    unit: apiItem.unit || 'tablet',
+    status: apiItem.status || (Number(apiItem.stock) > 0 ? 'In Stock' : 'Out of Stock'),
+    expiry: apiItem.expiry || '',
+    supplier: apiItem.supplier || '',
+    location: apiItem.location || '',
+    remarks: apiItem.remarks || '',
+    keywords: Array.isArray(apiItem.keywords) ? apiItem.keywords : [],
+    createdAt: apiItem.created_at || apiItem.createdAt,
+  };
+}
+
+function toApiInventoryPayload(record: InventoryRecord) {
+  return {
+    id: emptyToUndefined(record.id),
+    name: record.name,
+    dosage: emptyToUndefined(record.dosage),
+    stock: Number(record.stock) || 0,
+    unit: emptyToUndefined(record.unit),
+    status: emptyToUndefined(record.status),
+    expiry: emptyToUndefined(record.expiry),
+    supplier: emptyToUndefined(record.supplier),
+    location: emptyToUndefined(record.location),
+    remarks: emptyToUndefined(record.remarks),
+    keywords: record.keywords?.length ? record.keywords : undefined,
+  };
+}
+
+function toOptionalInteger(value: unknown) {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : undefined;
+}
+
+function emptyToUndefined(value: unknown) {
+  return typeof value === 'string' ? value.trim() || undefined : value;
 }
 
 function upsertById<T extends { id: string }>(records: T[], record: T) {
