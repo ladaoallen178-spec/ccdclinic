@@ -1,13 +1,42 @@
 // Prefer an explicit VITE_API_URL for backend calls.
-// If not set, use localhost in dev and the current origin in production.
+// If not set:
+// - In DEV: use http://localhost:8000 (backend default port)
+// - In PROD: use the VITE_BACKEND_URL or fail with clear message
 const apiUrl = (import.meta.env.VITE_API_URL ?? '').trim();
-const API_BASE_URLS = apiUrl
-  ? [apiUrl]
-  : import.meta.env.DEV
-  ? ['http://localhost:8001']
-  : [typeof window !== 'undefined' ? window.location.origin : ''];
+const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? '').trim();
+
+let API_BASE_URLS: string[];
+
+if (apiUrl) {
+  // Explicit VITE_API_URL takes precedence
+  API_BASE_URLS = [apiUrl];
+} else if (import.meta.env.DEV) {
+  // Development mode: use localhost backend
+  API_BASE_URLS = ['http://localhost:8000'];
+} else if (backendUrl) {
+  // Production: use explicit backend URL if provided
+  API_BASE_URLS = [backendUrl];
+} else {
+  // Fallback: This should not happen in production
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  console.warn(
+    '[API] No VITE_API_URL or VITE_BACKEND_URL set. Falling back to current origin.',
+    'This will fail if frontend and backend are on different domains.',
+    { origin }
+  );
+  API_BASE_URLS = origin ? [origin] : [];
+}
+
 const APP_BASE_URL = import.meta.env.VITE_BASE ?? '';
 const REQUEST_TIMEOUT_MS = 30000;
+
+console.log('[API] Configuration', {
+  isDev: import.meta.env.DEV,
+  apiUrl,
+  backendUrl,
+  baseUrls: API_BASE_URLS,
+});
+
 
 interface ApiResponse<T> {
   config: {

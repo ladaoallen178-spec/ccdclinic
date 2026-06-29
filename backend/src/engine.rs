@@ -37,17 +37,27 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = {
-        let client_origins = client_origins
+        let mut client_origins_list: Vec<&str> = client_origins
             .split(',')
             .map(str::trim)
             .filter(|value| !value.is_empty())
-            .collect::<Vec<_>>();
+            .collect();
 
-        if client_origins.is_empty() {
+        // Always add development origins for local testing
+        let dev_origins = vec![
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://127.0.0.1:5173",
+        ];
+
+        // If no CLIENT_URL set (deployment issue), fall back to permissive with logging
+        if client_origins_list.is_empty() {
+            tracing::warn!("CLIENT_URL environment variable not set. CORS is permissive. This should only happen in development.");
             CorsLayer::permissive()
         } else {
             let mut cors = CorsLayer::new()
-                .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
                 .allow_headers([
                     axum::http::header::CONTENT_TYPE,
                     axum::http::header::AUTHORIZATION,
@@ -57,11 +67,26 @@ async fn main() {
                 ])
                 .allow_credentials(true);
 
-            for origin in client_origins {
+            // Add all configured client origins
+            for origin in &client_origins_list {
                 cors = cors.allow_origin(
                     HeaderValue::from_str(origin)
-                        .expect("CLIENT_URL must contain valid origins like https://your-app.vercel.app"),
+                        .unwrap_or_else(|e| {
+                            tracing::error!(origin = %origin, error = ?e, "Invalid CLIENT_URL origin");
+                            HeaderValue::from_static("http://localhost:5173")
+                        }),
                 );
+            }
+
+            // Add development origins for testing
+            #[cfg(debug_assertions)]
+            {
+                for origin in dev_origins {
+                    cors = cors.allow_origin(
+                        HeaderValue::from_str(origin)
+                            .unwrap_or_else(|_| HeaderValue::from_static("http://localhost:5173")),
+                    );
+                }
             }
 
             cors

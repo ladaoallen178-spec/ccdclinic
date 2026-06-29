@@ -14,13 +14,32 @@ const DEFAULT_NURSE_HASH: &str = "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$5w4Q
 
 pub async fn init_db_pool() -> PgPool {
     let db_url: String = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set")
+        .unwrap_or_else(|_| {
+            eprintln!("\n❌ ERROR: DATABASE_URL environment variable is not set!");
+            eprintln!("\nFor Render deployment:");
+            eprintln!("  1. Go to your service in Render dashboard");
+            eprintln!("  2. Click 'Environment'");
+            eprintln!("  3. Add DATABASE_URL with your database connection string");
+            eprintln!("  4. Format: postgresql://user:password@host:port/database?sslmode=require\n");
+            eprintln!("For local development:");
+            eprintln!("  1. Create a .env file (see .env.example)");
+            eprintln!("  2. Run: cargo run\n");
+            std::process::exit(1);
+        })
         .trim()
         .to_string();
 
     let mut options: PgConnectOptions =
-        PgConnectOptions::from_str(&db_url)
-            .expect("Invalid DATABASE_URL");
+        match PgConnectOptions::from_str(&db_url) {
+            Ok(opts) => opts,
+            Err(err) => {
+                eprintln!("\n❌ ERROR: Invalid DATABASE_URL format!");
+                eprintln!("Error: {}\n", err);
+                eprintln!("Expected format: postgresql://username:password@host:port/database");
+                eprintln!("Example for Supabase: postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres?sslmode=require\n");
+                std::process::exit(1);
+            }
+        };
 
     options = options.statement_cache_capacity(0);
 
@@ -42,6 +61,15 @@ pub async fn init_db_pool() -> PgPool {
         Ok(_) => info!("Database connection verified successfully."),
         Err(err) => {
             error!(error = ?err, "Unable to verify database connection during startup.");
+            eprintln!("\n❌ DATABASE CONNECTION FAILED!");
+            eprintln!("Error: {:?}\n", err);
+            eprintln!("Possible causes:");
+            eprintln!("  1. Invalid DATABASE_URL (check format and credentials)");
+            eprintln!("  2. Database server is not running or unreachable");
+            eprintln!("  3. Incorrect username or password");
+            eprintln!("  4. Network/firewall blocking connection");
+            eprintln!("  5. Database doesn't exist\n");
+            eprintln!("Check your DATABASE_URL and try again.\n");
             std::process::exit(1);
         }
     }

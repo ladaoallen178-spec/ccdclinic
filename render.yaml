@@ -14,11 +14,87 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: CLIENT_URL
-        sync: false
+        # IMPORTANT: Set this to your Vercel frontend URL(s)
+        # Comma-separated list of allowed origins for CORS
+        # Examples:
+        # - Single deployment: https://ccdclinic.vercel.app
+        # - Multiple (main + preview): https://ccdclinic.vercel.app,https://ccdclinic-git-*.vercel.app
+        # Also add local dev URLs: http://localhost:5173,http://localhost:3000
+        value: "https://ccdclinic.vercel.app,http://localhost:5173,http://localhost:3000"
       - key: RUST_LOG
         value: "info"
 
+# IMPORTANT: Required Configuration for Deployment
+# ==================================================
+# 
+# CRITICAL ENVIRONMENT VARIABLES (Must be set in Render Dashboard):
+#
+# 1. DATABASE_URL (REQUIRED)
+#    Your PostgreSQL connection string
+#    
+#    Format: postgresql://username:password@host:port/database?sslmode=require
+#    
+#    Examples:
+#    - Supabase: postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT.supabase.co:5432/postgres?sslmode=require
+#    - Neon: postgresql://user:password@ep-XXXX.YOUR_REGION.neon.tech/dbname?sslmode=require
+#
+#    Steps to add:
+#    a) Open Render Dashboard → Select your service → Environment tab
+#    b) Click "Add Environment Variable"
+#    c) Key: "DATABASE_URL"
+#    d) Value: [Your full PostgreSQL connection string with password]
+#    e) Click Save
+#
+# 2. JWT_SECRET (REQUIRED)
+#    Random secret for JWT token signing
+#    
+#    Generate: openssl rand -hex 32
+#    
+#    Steps to add:
+#    a) Generate a random secret using the command above
+#    b) In Render Dashboard → Environment tab
+#    c) Click "Add Environment Variable"
+#    d) Key: "JWT_SECRET"
+#    e) Value: [Your generated random secret]
+#    f) Click Save
+#
+# 3. CLIENT_URL (CRITICAL FOR CORS)
+#    Comma-separated list of frontend URLs allowed to access this backend
+#    
+#    IMPORTANT: This fixes the CORS "Access-Control-Allow-Origin" error
+#    
+#    Set to your actual Vercel frontend URL(s):
+#    - Single deployment: https://ccdclinic.vercel.app
+#    - Multiple (main + preview): https://ccdclinic.vercel.app,https://ccdclinic-git-*.vercel.app
+#    
+#    Steps to add:
+#    a) Go to Render Dashboard → Select your service → Environment tab
+#    b) Click "Add Environment Variable"
+#    c) Key: "CLIENT_URL"
+#    d) Value: [Your Vercel frontend URL(s), comma-separated]
+#    e) Click Save
+#
+# DEPLOYMENT CHECKLIST:
+# ✓ Database service created and accessible
+# ✓ DATABASE_URL tested and working locally first
+# ✓ JWT_SECRET generated and set in Render
+# ✓ CLIENT_URL set to your actual Vercel frontend URL
+# ✓ All three variables (DATABASE_URL, JWT_SECRET, CLIENT_URL) are set before deployment
+# ✓ Backend service deployed and showing "Live"
+# ✓ Health check passes: https://your-render-service.onrender.com/healthz
+#
+# CORS ERROR FIX:
+# If you see "Failed to fetch" or CORS errors in browser:
+# 1. Check the frontend URL in the browser (e.g., https://ccdclinic-git-main-...vercel.app)
+# 2. Add that exact URL to CLIENT_URL in Render environment variables
+# 3. Multiple URLs can be added comma-separated
+# 4. Backend will automatically include all these origins in CORS headers
+#
+# LOCAL DEVELOPMENT:
+# Add http://localhost:5173 and http://localhost:3000 to CLIENT_URL to test locally
+#
 # Notes:
-# - This manifest is a starting point. For production, add your DATABASE_URL and other secrets
-#   using the Render dashboard's Secrets/Environment settings rather than committing them to git.
-# - Render will set the `PORT` environment variable at runtime; the backend reads `PORT`.
+# - Do NOT commit DATABASE_URL or JWT_SECRET to the repository
+# - Render automatically sets the PORT environment variable
+# - The backend will exit with status 1 if critical variables are missing
+# - First deployment may take 10-15 minutes to build

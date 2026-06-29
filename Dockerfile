@@ -42,6 +42,6 @@ COPY --from=node_builder /app/clinic-app/dist /app/public
 
 ENV RUST_LOG=info
 
-EXPOSE 8001
+EXPOSE 8000
 
 CMD ["backend"]

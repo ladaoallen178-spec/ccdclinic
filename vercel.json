@@ -8,5 +8,15 @@
       "source": "(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_API_URL": {
+      "description": "Backend API URL for frontend requests. Must be set to your Render backend URL.",
+      "example": "https://ccdclinic.onrender.com"
+    },
+    "VITE_BACKEND_URL": {
+      "description": "Fallback backend URL if VITE_API_URL is not set. Set to your Render backend URL.",
+      "example": "https://ccdclinic.onrender.com"
+    }
+  }
 }
