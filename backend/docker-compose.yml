@@ -1,7 +1,6 @@
 ﻿services:
   db:
     image: postgres:16-alpine
-    container_name: myengine_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -10,18 +9,29 @@
       - "5433:5432"
     volumes:
       - myengine_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d myengine"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   api:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: myengine_api
+      context: ..
+      dockerfile: backend/Dockerfile
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: myengine
+      DATABASE_URL: postgres://postgres:postgres@db:5432/myengine
+      PORT: 8000
       SUPABASE_URL: http://localhost:5173
       CLIENT_URL: http://localhost:5173
     ports:

@@ -12,7 +12,6 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use dotenvy::dotenv;
 use serde_json::json;
 use std::env;
 
@@ -30,7 +29,7 @@ use limiters::{ConcurrencyLimiter, enforce_concurrency};
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    dotenv().ok();
+    load_env();
 
     let client_origins = env::var("CLIENT_URL").unwrap_or_default();
     let limiter = ConcurrencyLimiter::new(5);
@@ -160,6 +159,20 @@ async fn main() {
     )
     .await
     .unwrap();
+}
+
+fn load_env() {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let current_dir = env::current_dir().unwrap_or_else(|_| manifest_dir.clone());
+
+    for env_file in [
+        current_dir.join(".env.local"),
+        manifest_dir.join(".env.local"),
+        current_dir.join(".env"),
+        manifest_dir.join(".env"),
+    ] {
+        dotenvy::from_path(env_file).ok();
+    }
 }
 
 async fn debug_users(Extension(state): Extension<AppState>) -> impl IntoResponse {
