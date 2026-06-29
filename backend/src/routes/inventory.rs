@@ -4,5 +4,5 @@ use crate::api::inventory::{create_inventory, get_inventory, get_inventory_item,
 pub fn inventory_routes() -> Router {
     Router::new()
         .route("/", post(create_inventory).get(get_inventory))
-        .route("/:id", get(get_inventory_item).delete(delete_inventory).put(update_inventory_stock))
+        .route("/{id}", get(get_inventory_item).delete(delete_inventory).put(update_inventory_stock))
 }
