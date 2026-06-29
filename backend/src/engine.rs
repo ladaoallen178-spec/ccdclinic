@@ -13,7 +13,7 @@ use axum::{
     Json, Router,
 };
 use serde_json::json;
-use std::env;
+use std::{env, io::ErrorKind};
 
 use tower_http::{cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use axum::http::header::CONTENT_TYPE;
@@ -149,16 +149,32 @@ async fn main() {
         }));
 
     let addr = format!("0.0.0.0:{}", port);
-    println!("Server running on http://{}", addr);
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(listener) => listener,
+        Err(err) if err.kind() == ErrorKind::AddrInUse => {
+            tracing::error!(
+                address = %addr,
+                "Port is already in use. Stop the existing backend process or set PORT to another value."
+            );
+            std::process::exit(1);
+        }
+        Err(err) => {
+            tracing::error!(error = ?err, address = %addr, "Failed to bind server address.");
+            std::process::exit(1);
+        }
+    };
 
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    println!("Server running on http://{}", addr);
     tracing::info!("Server listening on http://{}", addr);
-    axum::serve(
+    if let Err(err) = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
     .await
-    .unwrap();
+    {
+        tracing::error!(error = ?err, "Server stopped unexpectedly.");
+        std::process::exit(1);
+    }
 }
 
 fn load_env() {
