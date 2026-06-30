@@ -112,7 +112,9 @@ export default function MonthlyReport() {
       if (!v.createdAt) return;
       set.add(new Date(v.createdAt).getFullYear());
     });
-    set.add(now.getFullYear());
+    const current = now.getFullYear();
+    // ensure recent years are available as options (current and previous 5 years)
+    for (let y = current; y >= current - 5; y--) set.add(y);
     return Array.from(set).sort((a, b) => b - a);
   }, [visits, now]);
 
@@ -228,11 +230,14 @@ export default function MonthlyReport() {
                   <div style={{ marginTop: 8, fontSize: 12, color: '#6faea3' }}>
                     Km. 10, Catalunan Pequeño, Davao City • +63 (082) 241 7380 • admin@ccd.edu.ph • facebook.com/CityCollegeofDavaoOfficial
                   </div>
-                  <div style={{ fontWeight: 700, marginTop: 8 }}>{monthName(month).toUpperCase()} {year}</div>
                 </div>
 
                 <div style={{ width: 88 }} />
               </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: 8, marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>{monthName(month).toUpperCase()} {year}</div>
             </div>
 
             <div className="report-summary">
