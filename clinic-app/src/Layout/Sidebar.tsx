@@ -40,7 +40,7 @@ function Sidebar() {
     { to: '/staff-entry', label: 'Staff', icon: Users, badge: String(clinicStats.staffPending) },
     { to: '/bmi-calculator', label: 'BMI Calculator', icon: Calculator },
     { to: '/medical-docs', label: 'Medical Docs', icon: FolderOpen },
-    { to: '/medical-qr', label: 'Medical QR', icon: QrCode },
+    // Medical QR removed from sidebar per request
     { to: '/master-list', label: 'Master List', icon: ClipboardList },
     { to: '/inventory', label: 'Inventory', icon: Package, badge: clinicStats.lowStock ? String(clinicStats.lowStock) : undefined },
     { to: '/register-nurse', label: 'Register Nurse', icon: UserPlus },
