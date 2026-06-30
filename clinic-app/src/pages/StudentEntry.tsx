@@ -125,10 +125,11 @@ function StudentEntry() {
     };
 
     try {
-      const savedStudent = await saveStudentRecord({ ...student, status: 'Cleared' });
+        const savedStudent = await saveStudentRecord({ ...student, status: 'Cleared' });
       const savedVisit = await createVisitRecord(visit);
-      setStudents(students.map((item) => (item.id === student.id ? savedStudent : item)));
-      setVisits([savedVisit, ...visits]);
+      setStudents((current) => current.map((item) => (item.id === student.id ? savedStudent : item)));
+      setVisits((current) => [savedVisit, ...current]);
+      setActiveTab('today');
       toast.success('Student visit confirmed');
     } catch {
       toast.error('Student visit was not saved to the database.');

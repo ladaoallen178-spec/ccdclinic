@@ -142,7 +142,9 @@ export async function createVisitRecord(record: VisitRecord) {
   try {
     const response = await api.post('/api/visits', apiPayload);
     const apiVisit = response.data as any;
-    return transformApiVisit(apiVisit);
+    const visit = transformApiVisit(apiVisit);
+    saveVisits([visit, ...getVisits()]);
+    return visit;
   } catch (error) {
     console.error('[createVisitRecord] API error:', error);
     const visit = {

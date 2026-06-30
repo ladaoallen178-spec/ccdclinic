@@ -125,10 +125,11 @@ function StaffEntry() {
     };
 
     try {
-      const savedStaff = await saveStaffRecord({ ...staff, status: 'Cleared' });
+        const savedStaff = await saveStaffRecord({ ...staff, status: 'Cleared' });
       const savedVisit = await createVisitRecord(visit);
-      setStaffList(staffList.map((item) => (item.id === staff.id ? savedStaff : item)));
-      setVisits([savedVisit, ...visits]);
+      setStaffList((current) => current.map((item) => (item.id === staff.id ? savedStaff : item)));
+      setVisits((current) => [savedVisit, ...current]);
+      setActiveTab('today');
       toast.success('Staff visit confirmed');
     } catch {
       toast.error('Staff visit was not saved to the database.');
