@@ -51,14 +51,6 @@ async fn main() {
             .filter(|value| !value.is_empty())
             .collect();
 
-        // Always add development origins for local testing
-        let dev_origins = vec![
-            "http://localhost:5173",
-            "http://localhost:3000",
-            "http://localhost:8080",
-            "http://127.0.0.1:5173",
-        ];
-
         // If no CLIENT_URL set (deployment issue), fall back to permissive with logging
         if client_origins_list.is_empty() {
             tracing::warn!("CLIENT_URL environment variable not set. CORS is permissive. This should only happen in development.");
@@ -92,6 +84,13 @@ async fn main() {
             // Add development origins for testing
             #[cfg(debug_assertions)]
             {
+                let dev_origins = vec![
+                    "http://localhost:5173",
+                    "http://localhost:3000",
+                    "http://localhost:8080",
+                    "http://127.0.0.1:5173",
+                ];
+
                 for origin in dev_origins {
                     cors = cors.allow_origin(
                         HeaderValue::from_str(origin)
