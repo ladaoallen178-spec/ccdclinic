@@ -16,6 +16,11 @@ const formatDate = (dateString?: string) => {
 
 const createCsv = (rows: string[][]) => rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
 
+function normalizeOption(value: string, options: string[]) {
+  const normalizedValue = value.trim().toLowerCase();
+  return options.find((option) => option.toLowerCase() === normalizedValue) ?? value.trim();
+}
+
 export default function MasterList() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
@@ -34,15 +39,11 @@ export default function MasterList() {
       .catch(() => undefined);
   }, []);
 
-  const availableYearLevels = useMemo(
-    () => Array.from(new Set(students.map((student) => student.yearLevel || 'Unknown'))).sort(),
-    [students],
-  );
+  const YEAR_LEVEL_OPTIONS = ['1st year', '2nd year', '3rd year', '4th year'];
+  const PROGRAM_OPTIONS = ['ECE', 'BTVTED-CP', 'BTVTED-HVACT', 'ENTREP'];
 
-  const availablePrograms = useMemo(
-    () => Array.from(new Set(students.map((student) => student.program || 'Unknown'))).sort(),
-    [students],
-  );
+  const availableYearLevels = YEAR_LEVEL_OPTIONS;
+  const availablePrograms = PROGRAM_OPTIONS;
 
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
@@ -156,6 +157,11 @@ export default function MasterList() {
     if (!name) return null;
     const idVal = toText(readImportCell(row, STUDENT_IMPORT_FIELDS.id) || '');
     const id = idVal || genId('S');
+    const rawYearLevel = toText(readImportCell(row, STUDENT_IMPORT_FIELDS.yearLevel) || '');
+    const rawProgram = toText(readImportCell(row, STUDENT_IMPORT_FIELDS.program) || '');
+    const yearLevel = normalizeOption(rawYearLevel, YEAR_LEVEL_OPTIONS);
+    const program = normalizeOption(rawProgram, PROGRAM_OPTIONS);
+
     return {
       id,
       name,
@@ -164,8 +170,8 @@ export default function MasterList() {
       status: 'Pending',
       age: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.age) || ''),
       gender: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.gender) || ''),
-      yearLevel: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.yearLevel) || ''),
-      program: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.program) || ''),
+      yearLevel,
+      program,
       parentName: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.parentName) || ''),
       parentPhone: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.parentPhone) || ''),
       createdAt: toDateInputValue(readImportCell(row, STUDENT_IMPORT_FIELDS.createdAt) || new Date().toISOString()),
@@ -283,7 +289,7 @@ export default function MasterList() {
           <strong>{totals.total}</strong>
           <span>Total Students</span>
         </div>
-        {['1st Year', '2nd Year', '3rd Year', '4th Year'].map((year) => (
+        {availableYearLevels.map((year) => (
           <div key={year} className="summary-card">
             <strong>{totals.yearCounts[year] || 0}</strong>
             <span>{year}</span>
@@ -292,7 +298,7 @@ export default function MasterList() {
       </article>
 
       <article className="panel master-list-summary">
-        {['ECE', 'ENTREP', 'HVACRT', 'CP'].map((program) => (
+        {availablePrograms.map((program) => (
           <div key={program} className="summary-card">
             <strong>{totals.programCounts[program] || 0}</strong>
             <span>{program}</span>
