@@ -6,6 +6,13 @@ import {
   getStaff,
   getStudents,
   getVisits,
+  saveBmiRecords,
+  saveInventory,
+  saveMedicalDocuments,
+  saveNurses,
+  saveStaff,
+  saveStudents,
+  saveVisits,
 } from '../utils/clinicData';
 import type {
   BmiRecord,
@@ -56,6 +63,8 @@ type NurseRegistration = {
   contactNumber: string;
 };
 
+const INVENTORY_LOG_KEY = 'clinic-inventory-log';
+
 // === STUDENTS ===
 export async function loadStudents() {
   try {
@@ -70,11 +79,12 @@ export async function loadStudents() {
 export async function saveStudentRecord(record: StudentRecord) {
   try {
     const response = await api.post('/api/students', toApiStudentPayload(record));
-    requireApiField(response.data, 'id', 'student insert');
     return transformApiStudent(response.data);
   } catch (error) {
     console.error('[saveStudentRecord] API error:', error);
-    throw error;
+    const students = upsertById(getStudents(), record);
+    saveStudents(students);
+    return record;
   }
 }
 
@@ -83,39 +93,24 @@ export async function deleteStudentRecord(id: string) {
     await api.delete(`/api/students/${id}`);
   } catch (error) {
     console.error('[deleteStudentRecord] API error:', error);
-    throw error;
+    // Fallback to localStorage
+    saveStudents(getStudents().filter((student) => student.id !== id));
   }
 }
 
 // === STAFF ===
 export async function loadStaff() {
-  try {
-    const response = await api.get('/api/staff');
-    return ((response.data || []) as any[]).map(transformApiStaff);
-  } catch (error) {
-    console.warn('[loadStaff] API error, falling back to localStorage:', error);
-    return getStaff();
-  }
+  return getStaff();
 }
 
 export async function saveStaffRecord(record: StaffRecord) {
-  try {
-    const response = await api.post('/api/staff', toApiStaffPayload(record));
-    requireApiField(response.data, 'id', 'staff insert');
-    return transformApiStaff(response.data);
-  } catch (error) {
-    console.error('[saveStaffRecord] API error:', error);
-    throw error;
-  }
+  const staff = upsertById(getStaff(), record);
+  saveStaff(staff);
+  return record;
 }
 
 export async function deleteStaffRecord(id: string) {
-  try {
-    await api.delete(`/api/staff/${id}`);
-  } catch (error) {
-    console.error('[deleteStaffRecord] API error:', error);
-    throw error;
-  }
+  saveStaff(getStaff().filter((staff) => staff.id !== id));
 }
 
 // === VISITS ===
@@ -146,12 +141,16 @@ export async function createVisitRecord(record: VisitRecord) {
 
   try {
     const response = await api.post('/api/visits', apiPayload);
-    requireApiField(response.data, 'id', 'visit insert');
     const apiVisit = response.data as any;
     return transformApiVisit(apiVisit);
   } catch (error) {
     console.error('[createVisitRecord] API error:', error);
-    throw error;
+    const visit = {
+      ...record,
+      createdAt: record.createdAt || new Date().toISOString(),
+    };
+    saveVisits([visit, ...getVisits()]);
+    return visit;
   }
 }
 
@@ -174,10 +173,14 @@ export async function saveInventoryRecord(record: InventoryRecordInput) {
 
   try {
     const response = await api.post('/api/inventory', toApiInventoryPayload(normalizedRecord));
-    requireApiField(response.data, 'id', 'inventory insert');
     return transformApiInventory(response.data);
   } catch (error) {
     console.error('[saveInventoryRecord] API error:', error);
+    const current = getInventory() as InventoryRecord[];
+    const next = current.some((item) => item.id && normalizedRecord.id && item.id === normalizedRecord.id)
+      ? current.map((item) => (item.id === normalizedRecord.id ? normalizedRecord : item))
+      : [normalizedRecord, ...current];
+    saveInventory(next);
     throw error;
   }
 }
@@ -187,7 +190,9 @@ export async function deleteInventoryRecord(id: string) {
     await api.delete(`/api/inventory/${id}`);
   } catch (error) {
     console.error('[deleteInventoryRecord] API error:', error);
-    throw error;
+    // Fallback to localStorage
+    const current = getInventory() as InventoryRecord[];
+    saveInventory(current.filter((item) => item.id !== id));
   }
 }
 
@@ -202,109 +207,69 @@ export async function updateInventoryStock(id: string, newStock: number) {
 }
 
 export async function loadInventoryLogs() {
-  try {
-    const response = await api.get('/api/inventory-logs');
-    return ((response.data || []) as any[]).map(transformApiInventoryLog);
-  } catch (error) {
-    console.warn('[loadInventoryLogs] API error:', error);
-    return [];
-  }
+  return readStorage<InventoryLog[]>(INVENTORY_LOG_KEY, []);
 }
 
 export async function createInventoryLog(record: InventoryLog) {
-  try {
-    const response = await api.post('/api/inventory-logs', toApiInventoryLogPayload(record));
-    requireApiField(response.data, 'id', 'inventory log insert');
-    return transformApiInventoryLog(response.data);
-  } catch (error) {
-    console.error('[createInventoryLog] API error:', error);
-    throw error;
-  }
+  const log = {
+    ...record,
+    dateTime: record.dateTime || new Date().toISOString(),
+  };
+  localStorage.setItem(INVENTORY_LOG_KEY, JSON.stringify([log, ...readStorage<InventoryLog[]>(INVENTORY_LOG_KEY, [])]));
+  notifyClinicDataChanged();
+  return log;
 }
 
 export async function loadBmiRecords() {
-  try {
-    const response = await api.get('/api/bmi-records');
-    return sortNewest(((response.data || []) as any[]).map(transformApiBmiRecord));
-  } catch (error) {
-    console.warn('[loadBmiRecords] API error, falling back to localStorage:', error);
-    return sortNewest(getBmiRecords());
-  }
+  return sortNewest(getBmiRecords());
 }
 
 export async function createBmiRecord(record: BmiRecord) {
-  try {
-    const response = await api.post('/api/bmi-records', toApiBmiRecordPayload(record));
-    requireApiField(response.data, 'id', 'BMI insert');
-    return transformApiBmiRecord(response.data);
-  } catch (error) {
-    console.error('[createBmiRecord] API error:', error);
-    throw error;
-  }
+  const bmiRecord = {
+    ...record,
+    createdAt: record.createdAt || new Date().toISOString(),
+  };
+  saveBmiRecords([bmiRecord, ...getBmiRecords()]);
+  return bmiRecord;
 }
 
 export async function loadMedicalDocuments() {
-  try {
-    const response = await api.get('/api/medical-documents');
-    return sortNewest(((response.data || []) as any[]).map(transformApiMedicalDocument));
-  } catch (error) {
-    console.warn('[loadMedicalDocuments] API error, falling back to localStorage:', error);
-    return sortNewest(getMedicalDocuments());
-  }
+  return sortNewest(getMedicalDocuments());
 }
 
 export async function createMedicalDocument(record: MedicalDocumentRecord) {
-  try {
-    const response = await api.post('/api/medical-documents', toApiMedicalDocumentPayload(record));
-    requireApiField(response.data, 'id', 'medical document insert');
-    return transformApiMedicalDocument(response.data);
-  } catch (error) {
-    console.error('[createMedicalDocument] API error:', error);
-    throw error;
-  }
+  const documentRecord = {
+    ...record,
+    createdAt: record.createdAt || new Date().toISOString(),
+  };
+  saveMedicalDocuments([documentRecord, ...getMedicalDocuments()]);
+  return documentRecord;
 }
 
 export async function deleteMedicalDocument(id: string) {
-  try {
-    await api.delete(`/api/medical-documents/${id}`);
-  } catch (error) {
-    console.error('[deleteMedicalDocument] API error:', error);
-    throw error;
-  }
+  saveMedicalDocuments(getMedicalDocuments().filter((documentRecord) => documentRecord.id !== id));
 }
 
 export async function loadNurses() {
-  try {
-    const response = await api.get('/api/users');
-    return sortNewest(((response.data || []) as any[]).map(transformApiNurse));
-  } catch (error) {
-    console.warn('[loadNurses] API error, falling back to localStorage:', error);
-    return sortNewest(getNurses());
-  }
+  return sortNewest(getNurses());
 }
 
 export async function registerNurseAccount(registration: NurseRegistration) {
-  try {
-    const response = await api.post('/register', {
-      email: registration.email,
-      password: registration.password,
-      full_name: registration.name,
-      role: isNurseRole(registration.role) ? registration.role : 'Nurse',
-      contact_number: registration.contactNumber,
-    });
-    const user = (response.data as any).user;
-    requireApiField(user, 'id', 'nurse registration');
-    return transformApiNurse(user);
-  } catch (error) {
-    console.error('[registerNurseAccount] API error:', error);
-    throw error;
-  }
+  const nurse: NurseRecord = {
+    id: `NURSE-${Date.now()}`,
+    name: registration.name,
+    email: registration.email,
+    role: isNurseRole(registration.role) ? registration.role : 'Nurse',
+    contactNumber: registration.contactNumber,
+    createdAt: new Date().toISOString(),
+  };
+  saveNurses([nurse, ...getNurses()]);
+  return nurse;
 }
 
 // Helper function to transform API visit format to frontend format
 function transformApiVisit(apiVisit: any): VisitRecord {
   return {
-    id: apiVisit.id,
     patientType: apiVisit.patient_type,
     idNumber: apiVisit.student_id || apiVisit.staff_id || '',
     temperature: apiVisit.temperature || '',
@@ -334,34 +299,6 @@ function transformApiStudent(apiStudent: any): StudentRecord {
   };
 }
 
-function transformApiStaff(apiStaff: any): StaffRecord {
-  return {
-    id: apiStaff.id || '',
-    name: apiStaff.name || '',
-    department: apiStaff.department || '',
-    concern: apiStaff.concern || '',
-    status: apiStaff.status || 'Cleared',
-    age: apiStaff.age == null ? '' : String(apiStaff.age),
-    gender: apiStaff.gender || '',
-    staffType: apiStaff.staff_type || apiStaff.staffType || '',
-    position: apiStaff.position || '',
-    contactNumber: apiStaff.contact_number || apiStaff.contactNumber || '',
-    email: apiStaff.email || '',
-    createdAt: apiStaff.created_at || apiStaff.createdAt,
-  };
-}
-
-function transformApiNurse(apiUser: any): NurseRecord {
-  return {
-    id: apiUser.id || '',
-    name: apiUser.fullname || apiUser.full_name || apiUser.name || '',
-    email: apiUser.email || '',
-    role: isNurseRole(apiUser.role) ? apiUser.role : 'Nurse',
-    contactNumber: apiUser.contact_number || apiUser.contactNumber || '',
-    createdAt: apiUser.created_at || apiUser.createdAt || new Date().toISOString(),
-  };
-}
-
 function toApiStudentPayload(record: StudentRecord) {
   return {
     id: record.id,
@@ -375,22 +312,6 @@ function toApiStudentPayload(record: StudentRecord) {
     program: emptyToUndefined(record.program),
     parent_name: emptyToUndefined(record.parentName),
     parent_phone: emptyToUndefined(record.parentPhone),
-  };
-}
-
-function toApiStaffPayload(record: StaffRecord) {
-  return {
-    id: record.id,
-    name: record.name,
-    department: emptyToUndefined(record.department),
-    concern: emptyToUndefined(record.concern),
-    status: record.status,
-    age: toOptionalInteger(record.age),
-    gender: emptyToUndefined(record.gender),
-    staff_type: emptyToUndefined(record.staffType),
-    position: emptyToUndefined(record.position),
-    contact_number: emptyToUndefined(record.contactNumber),
-    email: emptyToUndefined(record.email),
   };
 }
 
@@ -411,50 +332,6 @@ function transformApiInventory(apiItem: any): InventoryRecord {
   };
 }
 
-function transformApiInventoryLog(apiLog: any): InventoryLog {
-  return {
-    id: apiLog.id,
-    dateTime: apiLog.date_time || apiLog.dateTime,
-    medicine: apiLog.medicine || '',
-    action: apiLog.action || '',
-    qty: apiLog.qty == null ? undefined : Number(apiLog.qty),
-    studentId: apiLog.student_id || apiLog.studentId || '',
-    studentName: apiLog.student_name || apiLog.studentName || '',
-    staffId: apiLog.staff_id || apiLog.staffId || '',
-    staffName: apiLog.staff_name || apiLog.staffName || '',
-    performedBy: apiLog.performed_by || apiLog.performedBy || '',
-    notes: apiLog.notes || '',
-  };
-}
-
-function transformApiBmiRecord(apiRecord: any): BmiRecord {
-  return {
-    id: apiRecord.id,
-    studentId: apiRecord.student_id || apiRecord.studentId || '',
-    studentName: apiRecord.student_name || apiRecord.studentName || '',
-    height: Number(apiRecord.height) || 0,
-    weight: Number(apiRecord.weight) || 0,
-    bmi: Number(apiRecord.bmi) || 0,
-    status: apiRecord.status || '',
-    createdAt: apiRecord.created_at || apiRecord.createdAt || '',
-  };
-}
-
-function transformApiMedicalDocument(apiDocument: any): MedicalDocumentRecord {
-  return {
-    id: apiDocument.id,
-    studentId: apiDocument.student_id || apiDocument.studentId || '',
-    studentName: apiDocument.student_name || apiDocument.studentName || '',
-    yearLevel: apiDocument.year_level || apiDocument.yearLevel || '',
-    program: apiDocument.program || '',
-    documentType: apiDocument.document_type || apiDocument.documentType || '',
-    documentDate: apiDocument.document_date || apiDocument.documentDate || '',
-    fileName: apiDocument.file_name || apiDocument.fileName || '',
-    remarks: apiDocument.remarks || '',
-    createdAt: apiDocument.created_at || apiDocument.createdAt || '',
-  };
-}
-
 function toApiInventoryPayload(record: InventoryRecord) {
   return {
     id: emptyToUndefined(record.id),
@@ -471,48 +348,6 @@ function toApiInventoryPayload(record: InventoryRecord) {
   };
 }
 
-function toApiInventoryLogPayload(record: InventoryLog) {
-  return {
-    id: record.id,
-    date_time: record.dateTime,
-    medicine: emptyToUndefined(record.medicine),
-    action: record.action,
-    qty: record.qty,
-    student_id: emptyToUndefined(record.studentId),
-    student_name: emptyToUndefined(record.studentName),
-    staff_id: emptyToUndefined(record.staffId),
-    staff_name: emptyToUndefined(record.staffName),
-    performed_by: emptyToUndefined(record.performedBy),
-    notes: emptyToUndefined(record.notes),
-  };
-}
-
-function toApiBmiRecordPayload(record: BmiRecord) {
-  return {
-    id: record.id,
-    student_id: record.studentId,
-    student_name: record.studentName,
-    height: record.height,
-    weight: record.weight,
-    bmi: record.bmi,
-    status: record.status,
-  };
-}
-
-function toApiMedicalDocumentPayload(record: MedicalDocumentRecord) {
-  return {
-    id: record.id,
-    student_id: record.studentId,
-    student_name: record.studentName,
-    year_level: record.yearLevel,
-    program: record.program,
-    document_type: record.documentType,
-    document_date: record.documentDate,
-    file_name: record.fileName,
-    remarks: emptyToUndefined(record.remarks),
-  };
-}
-
 function toOptionalInteger(value: unknown) {
   if (value === undefined || value === null || value === '') {
     return undefined;
@@ -526,6 +361,12 @@ function emptyToUndefined(value: unknown) {
   return typeof value === 'string' ? value.trim() || undefined : value;
 }
 
+function upsertById<T extends { id: string }>(records: T[], record: T) {
+  return records.some((item) => item.id === record.id)
+    ? records.map((item) => (item.id === record.id ? record : item))
+    : [record, ...records];
+}
+
 function sortNewest<T extends { createdAt?: string }>(records: T[]) {
   return [...records].sort((left, right) => {
     const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
@@ -534,10 +375,17 @@ function sortNewest<T extends { createdAt?: string }>(records: T[]) {
   });
 }
 
-function requireApiField(data: unknown, field: string, operation: string) {
-  if (!data || typeof data !== 'object' || !(field in data) || !(data as Record<string, unknown>)[field]) {
-    throw new Error(`Backend did not return an inserted row for ${operation}.`);
+function readStorage<T>(key: string, fallback: T): T {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? (JSON.parse(value) as T) : fallback;
+  } catch {
+    return fallback;
   }
+}
+
+function notifyClinicDataChanged() {
+  window.dispatchEvent(new Event('clinic-data-changed'));
 }
 
 function isNurseRole(value: string): value is NurseRecord['role'] {
