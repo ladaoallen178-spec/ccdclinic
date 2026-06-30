@@ -215,8 +215,7 @@ export default function MonthlyReport() {
             <div className="report-header" style={{ borderBottom: '3px solid #9fb6ad', paddingBottom: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <img src="/images/logo.png" alt="CCD Seal" style={{ width: 72, height: 72, objectFit: 'contain' }} />
-                  <img src="/images/logo.png" alt="CCD Seal" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                  <img src="/images/logo.png" alt="CCD Seal" style={{ width: 92, height: 92, objectFit: 'contain' }} />
                 </div>
 
                 <div style={{ textAlign: 'center', flex: 1 }}>
