@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStudents, getVisits } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
-import { loadStudents, loadVisits } from '../services/clinicRecords';
+import { loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -194,23 +194,23 @@ export default function MasterList() {
       }
 
       const savedStudents: StudentRecord[] = [];
+      const failedStudents: string[] = [];
       for (const s of imported) {
         try {
-          // saveStudentRecord will fallback to localStorage on API error
-          // import here to avoid circular import issues
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const { saveStudentRecord } = require('../services/clinicRecords');
           const saved = await saveStudentRecord(s);
           savedStudents.push(saved as StudentRecord);
         } catch (err) {
-          // if saving one fails, continue with others
+          failedStudents.push(s.name || s.id || 'Unknown');
           console.error('Failed to save student', err);
         }
       }
 
       if (savedStudents.length > 0) {
         setStudents((current) => [...savedStudents, ...current]);
-        toast.success(`${savedStudents.length} student${savedStudents.length === 1 ? '' : 's'} uploaded`);
+        toast.success(`${savedStudents.length} student${savedStudents.length === 1 ? '' : 's'} uploaded to the system.`);
+      }
+      if (failedStudents.length > 0) {
+        toast.error(`${failedStudents.length} student${failedStudents.length === 1 ? '' : 's'} could not be saved to the database.`);
       }
     } catch (err) {
       console.error(err);
