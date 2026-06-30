@@ -113,8 +113,8 @@ export default function MonthlyReport() {
       set.add(new Date(v.createdAt).getFullYear());
     });
     const current = now.getFullYear();
-    // ensure recent years are available as options (current and previous 5 years)
-    for (let y = current; y >= current - 5; y--) set.add(y);
+    // ensure years include a range around the current year (previous 5 and next 5 years)
+    for (let y = current + 5; y >= current - 5; y--) set.add(y);
     return Array.from(set).sort((a, b) => b - a);
   }, [visits, now]);
 
