@@ -7,13 +7,11 @@ import {
   Truck,
 } from 'lucide-react';
 import { useEffect, useState, CSSProperties } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getClinicStats } from '../utils/clinicData';
 import { loadInventory, loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';
 import backgroundImg from '../assets/hero.png';
 
 function NurseDashboard() {
-  const navigate = useNavigate();
   const [clinicStats, setClinicStats] = useState(getClinicStats);
 
   useEffect(() => {

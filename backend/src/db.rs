@@ -1,4 +1,4 @@
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{postgres::PgPoolOptions, FromRow, PgPool};
 use std::env;
 use std::time::Duration;
 use tracing::{error, info};
@@ -10,7 +10,17 @@ use uuid::Uuid;
 const DEFAULT_NURSE_EMAIL: &str = "nurse@ccd.edu";
 const DEFAULT_NURSE_NAME: &str = "Clinic Nurse Admin";
 const DEFAULT_NURSE_ROLE: &str = "Nurse";
-const DEFAULT_NURSE_HASH: &str = "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$5w4QpS2X+rL2x14P2aWn2aF1O/dM1N8bB9E/oU9l3V0";
+const DEFAULT_NURSE_HASH: &str =
+    "$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$5w4QpS2X+rL2x14P2aWn2aF1O/dM1N8bB9E/oU9l3V0";
+
+#[derive(Debug, FromRow)]
+struct DatabaseIdentity {
+    database_name: String,
+    database_user: String,
+    schema_name: String,
+    server_address: Option<String>,
+    server_port: Option<i32>,
+}
 
 pub async fn init_db_pool() -> PgPool {
     let db_url: String = env::var("DATABASE_URL")
@@ -20,7 +30,9 @@ pub async fn init_db_pool() -> PgPool {
             eprintln!("  1. Go to your service in Render dashboard");
             eprintln!("  2. Click 'Environment'");
             eprintln!("  3. Add DATABASE_URL with your database connection string");
-            eprintln!("  4. Format: postgresql://user:password@host:port/database?sslmode=require\n");
+            eprintln!(
+                "  4. Format: postgresql://user:password@host:port/database?sslmode=require\n"
+            );
             eprintln!("For local development:");
             eprintln!("  1. Create a .env file (see .env.example)");
             eprintln!("  2. Run: cargo run\n");
@@ -29,17 +41,16 @@ pub async fn init_db_pool() -> PgPool {
         .trim()
         .to_string();
 
-    let mut options: PgConnectOptions =
-        match PgConnectOptions::from_str(&db_url) {
-            Ok(opts) => opts,
-            Err(err) => {
-                eprintln!("\n❌ ERROR: Invalid DATABASE_URL format!");
-                eprintln!("Error: {}\n", err);
-                eprintln!("Expected format: postgresql://username:password@host:port/database");
-                eprintln!("Example for Supabase: postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres?sslmode=require\n");
-                std::process::exit(1);
-            }
-        };
+    let mut options: PgConnectOptions = match PgConnectOptions::from_str(&db_url) {
+        Ok(opts) => opts,
+        Err(err) => {
+            eprintln!("\n❌ ERROR: Invalid DATABASE_URL format!");
+            eprintln!("Error: {}\n", err);
+            eprintln!("Expected format: postgresql://username:password@host:port/database");
+            eprintln!("Example for Supabase: postgresql://postgres:PASSWORD@db.PROJECT.supabase.co:5432/postgres?sslmode=require\n");
+            std::process::exit(1);
+        }
+    };
 
     options = options.statement_cache_capacity(0);
 
@@ -57,7 +68,10 @@ pub async fn init_db_pool() -> PgPool {
         .max_lifetime(Duration::from_secs(1800))
         .connect_lazy_with(options);
 
-    match sqlx::query_scalar::<_, i32>("SELECT 1").fetch_one(&pool).await {
+    match sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(&pool)
+        .await
+    {
         Ok(_) => info!("Database connection verified successfully."),
         Err(err) => {
             error!(error = ?err, "Unable to verify database connection during startup.");
@@ -72,6 +86,30 @@ pub async fn init_db_pool() -> PgPool {
             eprintln!("Check your DATABASE_URL and try again.\n");
             std::process::exit(1);
         }
+    }
+
+    match sqlx::query_as::<_, DatabaseIdentity>(
+        r#"
+        SELECT
+            current_database() as database_name,
+            current_user as database_user,
+            current_schema() as schema_name,
+            inet_server_addr()::text as server_address,
+            inet_server_port() as server_port
+        "#,
+    )
+    .fetch_one(&pool)
+    .await
+    {
+        Ok(identity) => info!(
+            database_name = %identity.database_name,
+            database_user = %identity.database_user,
+            schema_name = %identity.schema_name,
+            server_address = ?identity.server_address,
+            server_port = ?identity.server_port,
+            "Application database identity verified"
+        ),
+        Err(err) => error!(error = ?err, "Unable to print database identity"),
     }
 
     if let Err(err) = ensure_auth_schema(&pool).await {
@@ -95,6 +133,7 @@ async fn ensure_auth_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
             email VARCHAR(255) UNIQUE NOT NULL,
             full_name VARCHAR(255),
             role VARCHAR(50) NOT NULL DEFAULT 'Nurse',
+            contact_number VARCHAR(50),
             password_hash VARCHAR(255) NOT NULL,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -106,6 +145,15 @@ async fn ensure_auth_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS contact_number VARCHAR(50)
         "#,
     )
     .execute(pool)
@@ -238,6 +286,42 @@ async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
             staff_name VARCHAR(255),
             performed_by VARCHAR(255) DEFAULT 'Master Admin',
             notes TEXT
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS bmi_records (
+            id VARCHAR(50) PRIMARY KEY,
+            student_id VARCHAR(50) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            student_name VARCHAR(255),
+            height NUMERIC(5, 2) NOT NULL,
+            weight NUMERIC(5, 2) NOT NULL,
+            bmi NUMERIC(5, 2) NOT NULL,
+            status VARCHAR(50) NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS medical_documents (
+            id VARCHAR(50) PRIMARY KEY,
+            student_id VARCHAR(50) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+            student_name VARCHAR(255),
+            year_level VARCHAR(50),
+            program VARCHAR(50),
+            document_type VARCHAR(100) NOT NULL,
+            document_date DATE NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            remarks TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
         "#,
     )

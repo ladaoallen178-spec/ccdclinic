@@ -27,6 +27,7 @@ export type StaffRecord = {
   position?: string;
   contactNumber?: string;
   email?: string;
+  createdAt?: string;
 };
 
 export type NurseRecord = {
@@ -39,6 +40,7 @@ export type NurseRecord = {
 };
 
 export type VisitRecord = {
+  id?: string;
   patientType: string;
   idNumber: string;
   temperature: string;

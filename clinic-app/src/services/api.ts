@@ -128,7 +128,24 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
     throw new Error(message) as ApiError;
   }
 
-  const responseData = await response.json().catch(() => ({}));
+  const contentType = response.headers.get('content-type') || '';
+  const expectsJson = response.status !== 204;
+  const isJson = contentType.toLowerCase().includes('application/json');
+
+  if (response.ok && expectsJson && !isJson) {
+    const error = new Error(
+      `Expected JSON from API but received "${contentType || 'unknown content type'}". Check VITE_API_URL/VITE_BACKEND_URL.`,
+    ) as ApiError;
+    error.response = {
+      status: response.status,
+      data: {
+        error: error.message,
+      },
+    };
+    throw error;
+  }
+
+  const responseData = isJson ? await response.json().catch(() => ({})) : {};
 
   console.debug('[API] Response', {
     url: `${baseURL}${url}`,

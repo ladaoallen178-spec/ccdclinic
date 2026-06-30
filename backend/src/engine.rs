@@ -1,33 +1,38 @@
 pub mod api;
-pub mod routes;
 pub mod db;
 pub mod limiters;
+pub mod routes;
 pub mod security;
 
 use axum::{
     extract::Extension,
     http::{Method, StatusCode},
     middleware,
-    response::{IntoResponse, Html},
+    response::{Html, IntoResponse},
     routing::get,
     Json, Router,
 };
 use serde_json::json;
 use std::{env, io::ErrorKind};
 
-use tower_http::{cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
+use api::auth::AppState;
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
-use std::path::PathBuf;
-use mime_guess;
 use db::init_db_pool;
+use limiters::{enforce_concurrency, ConcurrencyLimiter};
+use mime_guess;
 use routes::auth::auth_routes;
+use routes::bmi::bmi_routes;
+use routes::inventory::inventory_routes;
+use routes::inventory_logs::inventory_log_routes;
+use routes::medical_documents::medical_document_routes;
+use routes::staff::staff_routes;
 use routes::students::student_routes;
 use routes::visits::visit_routes;
-use routes::inventory::inventory_routes;
-use api::auth::AppState;
-use limiters::{ConcurrencyLimiter, enforce_concurrency};
-
+use std::path::PathBuf;
+use tower_http::{
+    cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer,
+};
 
 #[tokio::main]
 async fn main() {
@@ -60,7 +65,13 @@ async fn main() {
             CorsLayer::permissive()
         } else {
             let mut cors = CorsLayer::new()
-                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                ])
                 .allow_headers([
                     axum::http::header::CONTENT_TYPE,
                     axum::http::header::AUTHORIZATION,
@@ -72,13 +83,10 @@ async fn main() {
 
             // Add all configured client origins
             for origin in &client_origins_list {
-                cors = cors.allow_origin(
-                    HeaderValue::from_str(origin)
-                        .unwrap_or_else(|e| {
-                            tracing::error!(origin = %origin, error = ?e, "Invalid CLIENT_URL origin");
-                            HeaderValue::from_static("http://localhost:5173")
-                        }),
-                );
+                cors = cors.allow_origin(HeaderValue::from_str(origin).unwrap_or_else(|e| {
+                    tracing::error!(origin = %origin, error = ?e, "Invalid CLIENT_URL origin");
+                    HeaderValue::from_static("http://localhost:5173")
+                }));
             }
 
             // Add development origins for testing
@@ -113,8 +121,12 @@ async fn main() {
     let api = Router::new()
         .merge(auth_routes())
         .nest("/api/students", student_routes())
+        .nest("/api/staff", staff_routes())
         .nest("/api/visits", visit_routes())
         .nest("/api/inventory", inventory_routes())
+        .nest("/api/inventory-logs", inventory_log_routes())
+        .nest("/api/bmi-records", bmi_routes())
+        .nest("/api/medical-documents", medical_document_routes())
         .layer(Extension(state))
         .layer(middleware::from_fn(move |req, next| {
             enforce_concurrency(limiter.clone(), req, next)
@@ -134,7 +146,10 @@ async fn main() {
         let full = std::path::Path::new(base).join(&path);
         if !full.exists() || !full.is_file() {
             let mut headers = HeaderMap::new();
-            headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+            headers.insert(
+                CONTENT_TYPE,
+                HeaderValue::from_static("text/plain; charset=utf-8"),
+            );
             return (headers, b"Not found".to_vec());
         }
 
@@ -144,13 +159,17 @@ async fn main() {
                 let mut headers = HeaderMap::new();
                 headers.insert(
                     CONTENT_TYPE,
-                    HeaderValue::from_str(mime.as_ref()).unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
+                    HeaderValue::from_str(mime.as_ref())
+                        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
                 );
                 (headers, body)
             }
             Err(_) => {
                 let mut headers = HeaderMap::new();
-                headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+                headers.insert(
+                    CONTENT_TYPE,
+                    HeaderValue::from_static("text/plain; charset=utf-8"),
+                );
                 (headers, b"Internal server error".to_vec())
             }
         }
@@ -224,7 +243,10 @@ fn load_env() {
 }
 
 async fn debug_users(Extension(state): Extension<AppState>) -> impl IntoResponse {
-    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users").fetch_one(&state.db).await {
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        .fetch_one(&state.db)
+        .await
+    {
         Ok(count) => Json(json!({
             "users_table_exists": true,
             "users_count": count,

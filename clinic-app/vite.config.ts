@@ -1,16 +1,12 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default ({ mode }) => {
-  process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
-
-  return defineConfig({
-    plugins: [react()],
-    base: '/',
-    server: {
-      host: 'localhost',
-      port: 5174,
-      strictPort: false,
-    }
-  })
-}
+export default defineConfig({
+  plugins: [react()],
+  base: '/',
+  server: {
+    host: 'localhost',
+    port: 5174,
+    strictPort: false,
+  },
+})

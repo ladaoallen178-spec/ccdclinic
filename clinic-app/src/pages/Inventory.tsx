@@ -3,7 +3,7 @@ import { PlusCircle, Search, Trash, Plus, ArrowLeft, Upload } from 'lucide-react
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { getInventory, saveInventory } from '../utils/clinicData';
+import { getInventory } from '../utils/clinicData';
 import {
   createInventoryLog,
   deleteInventoryRecord,
@@ -62,11 +62,6 @@ function readLogs(): InventoryLog[] {
   } catch {
     return [];
   }
-}
-
-function saveLogs(logs: InventoryLog[]) {
-  localStorage.setItem(LOG_KEY, JSON.stringify(logs));
-  window.dispatchEvent(new Event('clinic-data-changed'));
 }
 
 function genId(prefix = 'INV') {
@@ -145,10 +140,6 @@ export default function Inventory() {
   const [isUploadingInventory, setIsUploadingInventory] = useState(false);
 
   useEffect(() => {
-    saveInventory(items as any);
-  }, [items]);
-
-  useEffect(() => {
     loadInventory()
       .then((records) => setItems(records as InventoryRow[]))
       .catch(() => toast.error('Unable to load inventory from the database.'));
@@ -165,7 +156,6 @@ export default function Inventory() {
       const saved = await createInventoryLog(next);
       const nextLogs = [saved, ...logs];
       setLogs(nextLogs);
-      saveLogs(nextLogs);
     } catch {
       toast.error('Inventory log was not saved to the database.');
     }

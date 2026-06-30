@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { getVisits, getStudents, getStaff } from '../utils/clinicData';
 import type { StaffRecord, StudentRecord, VisitRecord } from '../utils/clinicData';
 import { loadStaff, loadStudents, loadVisits } from '../services/clinicRecords';

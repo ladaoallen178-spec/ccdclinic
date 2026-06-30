@@ -8,13 +8,13 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use tracing::{error, info};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{FromRow, PgPool};
+use tracing::{error, info};
 use uuid::Uuid;
 
 // Requires a PostgreSQL users table such as:
@@ -40,6 +40,7 @@ pub struct RegisterRequest {
     pub password: String,
     pub full_name: Option<String>,
     pub role: Option<String>,
+    pub contact_number: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -54,6 +55,8 @@ pub struct UserResponse {
     pub email: String,
     pub fullname: Option<String>,
     pub role: String,
+    pub contact_number: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -76,6 +79,8 @@ struct UserRecord {
     email: String,
     full_name: Option<String>,
     role: String,
+    contact_number: Option<String>,
+    created_at: Option<String>,
     password_hash: String,
 }
 
@@ -85,37 +90,51 @@ pub async fn register(
 ) -> impl IntoResponse {
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim();
-    let full_name = payload
-        .full_name
-        .and_then(|name| {
-            let trimmed = name.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        });
+    let full_name = payload.full_name.and_then(|name| {
+        let trimmed = name.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
+    let contact_number = payload.contact_number.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    });
 
     if email.is_empty() || password.is_empty() {
         return error_response(StatusCode::BAD_REQUEST, "Email and password are required.");
     }
 
+    info!(email = %email, role = ?payload.role, "Auth register request received");
+
     let salt = SaltString::generate(&mut thread_rng());
     let password_hash = match Argon2::default().hash_password(password.as_bytes(), &salt) {
         Ok(hash) => hash.to_string(),
-        Err(_) => return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to hash password."),
+        Err(_) => {
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to hash password.",
+            )
+        }
     };
 
     let user_id = Uuid::new_v4();
     let role = payload.role.unwrap_or_else(|| "Nurse".to_string());
     let result = sqlx::query(
-        r#"INSERT INTO users (id, email, full_name, role, password_hash, created_at)
-           VALUES ($1, $2, $3, $4, $5, now())"#,
+        r#"INSERT INTO users (id, email, full_name, role, contact_number, password_hash, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, now())"#,
     )
     .bind(user_id)
     .bind(&email)
     .bind(&full_name)
     .bind(&role)
+    .bind(&contact_number)
     .bind(&password_hash)
     .execute(&state.db)
     .await;
@@ -123,6 +142,7 @@ pub async fn register(
     match result {
         Ok(_) => match create_token(&state.jwt_secret, user_id, &email).await {
             Ok(token) => {
+                info!(email = %email, user_id = %user_id, "Auth register insert completed");
                 let response = AuthResponse {
                     token,
                     user: UserResponse {
@@ -130,20 +150,29 @@ pub async fn register(
                         email: email.clone(),
                         fullname: full_name.clone(),
                         role: role.clone(),
+                        contact_number: contact_number.clone(),
+                        created_at: Some(Utc::now().to_rfc3339()),
                     },
                 };
                 (StatusCode::CREATED, Json(response)).into_response()
             }
-            Err(_) => error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate auth token."),
+            Err(_) => error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to generate auth token.",
+            ),
         },
         Err(err) => {
+            error!(email = %email, error = ?err, "Auth register insert failed");
             if let Some(db_err) = err.as_database_error() {
                 let message = db_err.message();
                 if message.contains("unique") || message.contains("duplicate") {
                     return error_response(StatusCode::CONFLICT, "Email already exists.");
                 }
             }
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to register user.")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Unable to register user.",
+            )
         }
     }
 }
@@ -162,7 +191,13 @@ pub async fn login(
     }
 
     let row = sqlx::query_as::<_, UserRecord>(
-        r#"SELECT id, email, full_name, role, password_hash FROM users WHERE email = $1"#,
+        r#"
+        SELECT id, email, full_name, role, contact_number,
+               to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZ') as created_at,
+               password_hash
+        FROM users
+        WHERE email = $1
+        "#,
     )
     .bind(&email)
     .fetch_optional(&state.db)
@@ -184,11 +219,17 @@ pub async fn login(
         Ok(hash) => hash,
         Err(err) => {
             error!(email = %email, error = ?err, "Auth login failed: stored password hash invalid");
-            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Stored password is invalid.");
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Stored password is invalid.",
+            );
         }
     };
 
-    if Argon2::default().verify_password(password.as_bytes(), &password_hash).is_err() {
+    if Argon2::default()
+        .verify_password(password.as_bytes(), &password_hash)
+        .is_err()
+    {
         info!(email = %email, "Auth login failed: invalid password");
         return error_response(StatusCode::UNAUTHORIZED, "Invalid email or password.");
     }
@@ -206,18 +247,62 @@ pub async fn login(
                     email: email.clone(),
                     fullname: full_name.clone(),
                     role,
+                    contact_number: row.contact_number,
+                    created_at: row.created_at,
                 },
             };
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(err) => {
             error!(email = %email, error = ?err, "Auth login failed: JWT token creation failed");
-            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to generate auth token.")
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to generate auth token.",
+            )
         }
     }
 }
 
-async fn create_token(secret: &str, user_id: Uuid, email: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub async fn list_users(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    let rows = sqlx::query_as::<_, UserRecord>(
+        r#"
+        SELECT id, email, full_name, role, contact_number,
+               to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZ') as created_at,
+               password_hash
+        FROM users
+        ORDER BY created_at DESC
+        "#,
+    )
+    .fetch_all(&state.db)
+    .await;
+
+    match rows {
+        Ok(users) => {
+            let response: Vec<UserResponse> = users
+                .into_iter()
+                .map(|user| UserResponse {
+                    id: user.id,
+                    email: user.email,
+                    fullname: user.full_name,
+                    role: user.role,
+                    contact_number: user.contact_number,
+                    created_at: user.created_at,
+                })
+                .collect();
+            Json(response).into_response()
+        }
+        Err(err) => {
+            error!(error = ?err, "Unable to list users");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "Unable to list users.")
+        }
+    }
+}
+
+async fn create_token(
+    secret: &str,
+    user_id: Uuid,
+    email: &str,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
     let exp = now + Duration::hours(24);
     let claims = Claims {
@@ -227,7 +312,11 @@ async fn create_token(secret: &str, user_id: Uuid, email: &str) -> Result<String
         iat: now.timestamp() as usize,
     };
 
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
 }
 
 fn error_response(status: StatusCode, message: &'static str) -> Response {
@@ -237,5 +326,5 @@ fn error_response(status: StatusCode, message: &'static str) -> Response {
             "error": message,
         })),
     )
-    .into_response()
+        .into_response()
 }

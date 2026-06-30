@@ -4,8 +4,9 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use sqlx::FromRow;
+use tracing::{error, info};
+use uuid::Uuid;
 
 use crate::api::auth::AppState;
 
@@ -47,12 +48,27 @@ pub async fn create_visit(
         .status
         .unwrap_or_else(|| if referred { "Referred" } else { "Pending" }.to_string());
 
+    info!(
+        visit_id = %id,
+        patient_type = %payload.patient_type,
+        student_id = ?payload.student_id,
+        staff_id = ?payload.staff_id,
+        status = %status,
+        "Create visit request received"
+    );
+
     // Validate patient reference
     if payload.patient_type == "Student" && payload.student_id.is_none() {
-        return Err((StatusCode::BAD_REQUEST, "Student ID required for Student visits".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Student ID required for Student visits".to_string(),
+        ));
     }
     if payload.patient_type == "Staff" && payload.staff_id.is_none() {
-        return Err((StatusCode::BAD_REQUEST, "Staff ID required for Staff visits".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Staff ID required for Staff visits".to_string(),
+        ));
     }
 
     let result = sqlx::query_as::<_, VisitRecord>(
@@ -77,8 +93,15 @@ pub async fn create_visit(
     .bind(&status)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+    .map_err(|e| {
+        error!(visit_id = %id, error = ?e, "Create visit insert failed");
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
 
+    info!(visit_id = %result.id, "Create visit insert completed");
     Ok((StatusCode::CREATED, Json(result)))
 }
 
@@ -96,7 +119,12 @@ pub async fn get_visits(
     )
     .fetch_all(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?;
 
     Ok(Json(visits))
 }
@@ -117,7 +145,12 @@ pub async fn get_visit(
     .bind(&id)
     .fetch_optional(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Database error: {}", e),
+        )
+    })?
     .ok_or((StatusCode::NOT_FOUND, "Visit not found".to_string()))?;
 
     Ok(Json(visit))
@@ -131,7 +164,12 @@ pub async fn delete_visit(
         .bind(&id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

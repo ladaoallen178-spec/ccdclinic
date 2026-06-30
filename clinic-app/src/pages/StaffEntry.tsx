@@ -416,46 +416,6 @@ function StaffEntry() {
                 ))}
               </tbody>
             </table>
-            {historyStaff ? (
-              <div className="student-history-panel">
-                <div>
-                  <strong>{historyStaff.name}</strong>
-                  <button type="button" aria-label="Close history" onClick={() => setHistoryStaffId(null)}>
-                    <X size={17} aria-hidden="true" />
-                  </button>
-                </div>
-                <table className="student-table compact">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Reason</th>
-                      <th>Temp</th>
-                      <th>BP</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {staffVisits.filter((visit) => visit.idNumber === historyStaff.id).length ? (
-                      staffVisits
-                        .filter((visit) => visit.idNumber === historyStaff.id)
-                        .map((visit) => (
-                          <tr key={`${visit.createdAt}-${visit.idNumber}`}>
-                            <td>{visit.createdAt ? formatDateTime(new Date(visit.createdAt)) : '-'}</td>
-                            <td>{getVisitReason(visit) || '-'}</td>
-                            <td>{visit.temperature ? `${visit.temperature}C` : '-'}</td>
-                            <td>{visit.bloodPressure || '-'}</td>
-                          </tr>
-                        ))
-                    ) : (
-                      <tr>
-                        <td className="empty-table-cell" colSpan={4}>
-                          No history yet
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
           </article>
         </section>
       ) : null}

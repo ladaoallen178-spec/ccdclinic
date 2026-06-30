@@ -4,8 +4,9 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use sqlx::FromRow;
+use tracing::{error, info};
+use uuid::Uuid;
 
 use crate::api::auth::AppState;
 
@@ -49,7 +50,9 @@ pub async fn create_inventory(
     Extension(state): Extension<AppState>,
     Json(payload): Json<CreateInventoryRequest>,
 ) -> Result<(StatusCode, Json<InventoryRecord>), (StatusCode, String)> {
-    let id = payload.id.unwrap_or_else(|| format!("INV-{}", Uuid::new_v4().to_string()[0..8].to_uppercase()));
+    let id = payload
+        .id
+        .unwrap_or_else(|| format!("INV-{}", Uuid::new_v4().to_string()[0..8].to_uppercase()));
     let status = payload.status.unwrap_or_else(|| {
         if payload.stock > 0 {
             "In Stock".to_string()
@@ -57,6 +60,15 @@ pub async fn create_inventory(
             "Out of Stock".to_string()
         }
     });
+
+    info!(inventory_id = %id, name = %payload.name, stock = payload.stock, status = %status, "Create inventory request received");
+
+    if payload.name.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Inventory name is required".to_string(),
+        ));
+    }
 
     let result = sqlx::query_as::<_, InventoryRecord>(
         r#"
@@ -89,8 +101,12 @@ pub async fn create_inventory(
     .bind(&payload.keywords)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+    .map_err(|e| {
+        error!(inventory_id = %id, error = ?e, "Create inventory insert failed");
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+    })?;
 
+    info!(inventory_id = %result.id, name = %result.name, "Create inventory insert completed");
     Ok((StatusCode::CREATED, Json(result)))
 }
 
@@ -172,7 +188,12 @@ pub async fn delete_inventory(
         .bind(&id)
         .execute(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Database error: {}", e),
+            )
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }

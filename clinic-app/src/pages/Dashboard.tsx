@@ -1,4 +1,3 @@
-import React from 'react'
 import { GraduationCap, Briefcase, Calendar, AlertCircle, Clock, Users } from 'lucide-react';
 
 export default function Dashboard() {

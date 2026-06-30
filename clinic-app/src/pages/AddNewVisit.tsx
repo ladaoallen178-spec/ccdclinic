@@ -3,16 +3,22 @@ import { ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getVisits, getStaff, getStudents } from '../utils/clinicData';
 import type { VisitRecord, StaffRecord, StudentRecord } from '../utils/clinicData';
-import { createVisitRecord, loadVisits, saveStaffRecord, saveStudentRecord } from '../services/clinicRecords';
+import { createVisitRecord, loadStaff, loadStudents, loadVisits, saveStaffRecord, saveStudentRecord } from '../services/clinicRecords';
 
 export default function AddNewVisit() {
   const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
+  const [students, setStudents] = useState<StudentRecord[]>(getStudents);
+  const [staffList, setStaffList] = useState<StaffRecord[]>(getStaff);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    loadVisits()
-      .then(setVisits)
-      .catch(() => toast.error('Unable to load visits from the database.'));
+    Promise.all([loadVisits(), loadStudents(), loadStaff()])
+      .then(([nextVisits, nextStudents, nextStaff]) => {
+        setVisits(nextVisits);
+        setStudents(nextStudents);
+        setStaffList(nextStaff);
+      })
+      .catch(() => toast.error('Unable to load clinic records from the database.'));
   }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -51,7 +57,7 @@ export default function AddNewVisit() {
       const effectiveName = patientName || idNumber;
 
       if (patientType === 'Student') {
-        const existingStudent = getStudents().find(
+        const existingStudent = students.find(
           (student) => student.id === idNumber || student.name.toLowerCase() === effectiveName.toLowerCase(),
         );
         const student: StudentRecord = existingStudent
@@ -73,9 +79,14 @@ export default function AddNewVisit() {
               concern: visit.reasonForVisit,
               status: 'Pending',
             };
-        await saveStudentRecord(student);
+        const savedStudent = await saveStudentRecord(student);
+        setStudents((current) =>
+          current.some((item) => item.id === savedStudent.id)
+            ? current.map((item) => (item.id === savedStudent.id ? savedStudent : item))
+            : [savedStudent, ...current],
+        );
       } else if (patientType === 'Staff') {
-        const existingStaff = getStaff().find(
+        const existingStaff = staffList.find(
           (staff) => staff.id === idNumber || staff.name.toLowerCase() === effectiveName.toLowerCase(),
         );
         const staff: StaffRecord = existingStaff
@@ -97,7 +108,12 @@ export default function AddNewVisit() {
               concern: visit.reasonForVisit,
               status: 'Pending',
             };
-        await saveStaffRecord(staff);
+        const savedStaff = await saveStaffRecord(staff);
+        setStaffList((current) =>
+          current.some((item) => item.id === savedStaff.id)
+            ? current.map((item) => (item.id === savedStaff.id ? savedStaff : item))
+            : [savedStaff, ...current],
+        );
       }
 
       const saved = await createVisitRecord(visit);
