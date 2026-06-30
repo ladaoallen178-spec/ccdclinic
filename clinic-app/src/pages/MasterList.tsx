@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Download, FileText, RefreshCcw, Search, Printer } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { Download, FileText, RefreshCcw, Search, Printer, Upload } from 'lucide-react';
+import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStudents, getVisits } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
@@ -15,6 +17,7 @@ const formatDate = (dateString?: string) => {
 const createCsv = (rows: string[][]) => rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
 
 export default function MasterList() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
   const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
   const [yearFilter, setYearFilter] = useState('All Years');
@@ -106,6 +109,116 @@ export default function MasterList() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  function normalizeHeader(value: string) {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  function readImportCell(row: Record<string, unknown>, aliases: string[]) {
+    const normalizedAliases = aliases.map(normalizeHeader);
+    const entry = Object.entries(row).find(([key]) => normalizedAliases.includes(normalizeHeader(key)));
+    return entry?.[1];
+  }
+
+  function toText(value: unknown) {
+    return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim();
+  }
+
+  function toDateInputValue(value: unknown) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString();
+    }
+    const text = toText(value);
+    if (!text) return '';
+    const parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? text : parsed.toISOString();
+  }
+
+  function genId(prefix = 'S') {
+    return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 9000 + 1000)}`;
+  }
+
+  const STUDENT_IMPORT_FIELDS: Record<string, string[]> = {
+    id: ['student id', 'id', 'student number', 'student no', 'sid'],
+    name: ['name', 'full name', 'student name'],
+    yearLevel: ['year level', 'grade level', 'grade', 'year'],
+    program: ['program', 'course', 'strand'],
+    age: ['age'],
+    gender: ['gender', 'sex'],
+    parentName: ['parent name', 'guardian name', 'mother name', 'father name'],
+    parentPhone: ['parent phone', 'guardian phone', 'parent contact', 'contact number', 'phone'],
+    createdAt: ['date registered', 'created at', 'createdat', 'date', 'registered'],
+    section: ['section'],
+  };
+
+  function mapSpreadsheetRowToStudent(row: Record<string, unknown>): StudentRecord | null {
+    const name = toText(readImportCell(row, STUDENT_IMPORT_FIELDS.name) || '');
+    if (!name) return null;
+    const idVal = toText(readImportCell(row, STUDENT_IMPORT_FIELDS.id) || '');
+    const id = idVal || genId('S');
+    return {
+      id,
+      name,
+      section: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.section) || ''),
+      concern: '',
+      status: 'Pending',
+      age: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.age) || ''),
+      gender: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.gender) || ''),
+      yearLevel: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.yearLevel) || ''),
+      program: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.program) || ''),
+      parentName: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.parentName) || ''),
+      parentPhone: toText(readImportCell(row, STUDENT_IMPORT_FIELDS.parentPhone) || ''),
+      createdAt: toDateInputValue(readImportCell(row, STUDENT_IMPORT_FIELDS.createdAt) || new Date().toISOString()),
+    };
+  }
+
+  async function handleStudentFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+      const firstSheetName = workbook.SheetNames[0];
+      const firstSheet = firstSheetName ? workbook.Sheets[firstSheetName] : undefined;
+
+      if (!firstSheet) {
+        toast.error('The selected file does not contain a worksheet.');
+        return;
+      }
+
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '', raw: false });
+      const imported = rows.map(mapSpreadsheetRowToStudent).filter((r): r is StudentRecord => Boolean(r));
+      if (imported.length === 0) {
+        toast.error('No student rows found. Include a Name or Full Name column.');
+        return;
+      }
+
+      const savedStudents: StudentRecord[] = [];
+      for (const s of imported) {
+        try {
+          // saveStudentRecord will fallback to localStorage on API error
+          // import here to avoid circular import issues
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const { saveStudentRecord } = require('../services/clinicRecords');
+          const saved = await saveStudentRecord(s);
+          savedStudents.push(saved as StudentRecord);
+        } catch (err) {
+          // if saving one fails, continue with others
+          console.error('Failed to save student', err);
+        }
+      }
+
+      if (savedStudents.length > 0) {
+        setStudents((current) => [...savedStudents, ...current]);
+        toast.success(`${savedStudents.length} student${savedStudents.length === 1 ? '' : 's'} uploaded`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Unable to read the Excel file.');
+    } finally {
+      if (event.target) event.target.value = '';
+    }
+  }
 
   const printTable = () => {
     const header = `<h1 style="font-family: Arial, sans-serif;">CCD Students Master List</h1><p style="font-family: Arial, sans-serif;">${formatDate(new Date().toISOString())}</p>`;
@@ -227,6 +340,10 @@ export default function MasterList() {
           <button type="button" onClick={printTable}>
             <Printer size={16} /> Print
           </button>
+          <button type="button" onClick={() => fileInputRef.current?.click()}>
+            <Upload size={16} /> Upload Excel
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleStudentFileUpload} style={{ display: 'none' }} />
           <button type="button" onClick={exportCsv}>
             <Download size={16} /> Export CSV
           </button>
