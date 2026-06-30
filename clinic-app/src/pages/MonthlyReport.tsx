@@ -212,10 +212,28 @@ export default function MonthlyReport() {
 
         <div ref={reportRef} className="report-container">
           <div className="report-paper">
-            <div className="report-header">
-              <h2>SCHOOL CLINIC</h2>
-              <div>MONTHLY PATIENTS TREATMENT REPORT</div>
-              <div style={{ fontWeight: 700, marginTop: 8 }}>{monthName(month).toUpperCase()} {year}</div>
+            <div className="report-header" style={{ borderBottom: '3px solid #9fb6ad', paddingBottom: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <img src="/images/logo.png" alt="CCD Seal" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                  <img src="/images/logo.png" alt="CCD Seal" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+                </div>
+
+                <div style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: '#6faea3', letterSpacing: 1 }}>
+                    CITY COLLEGE OF DAVAO
+                  </div>
+                  <div style={{ fontSize: 18, color: '#6faea3', marginTop: 6 }}>
+                    Health & Sanitation Office
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#6faea3' }}>
+                    Km. 10, Catalunan Pequeño, Davao City • +63 (082) 241 7380 • admin@ccd.edu.ph • facebook.com/CityCollegeofDavaoOfficial
+                  </div>
+                  <div style={{ fontWeight: 700, marginTop: 8 }}>{monthName(month).toUpperCase()} {year}</div>
+                </div>
+
+                <div style={{ width: 88 }} />
+              </div>
             </div>
 
             <div className="report-summary">
