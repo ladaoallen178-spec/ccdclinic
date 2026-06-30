@@ -269,10 +269,7 @@ export default function MonthlyReport() {
               </div>
             </div>
 
-            <div className="report-footer">
-              <div style={{ fontWeight: 700 }}>NURSE NAME HERE</div>
-              <div>Submitted by:</div>
-            </div>
+            {/* Footer removed per request */}
           </div>
         </div>
       </article>
