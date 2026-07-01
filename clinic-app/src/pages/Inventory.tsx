@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { PlusCircle, Search, Trash, Plus, ArrowLeft, Upload } from 'lucide-react';
+import { PlusCircle, Search, Trash, Plus, ArrowLeft, Upload, Minus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -10,6 +10,7 @@ import {
   loadInventory,
   loadInventoryLogs,
   saveInventoryRecord,
+  updateInventoryStock,
 } from '../services/clinicRecords';
 
 type InventoryRow = {
@@ -126,6 +127,8 @@ export default function Inventory() {
 
   const [logs, setLogs] = useState<InventoryLog[]>(() => readLogs());
   const [search, setSearch] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [adjustQty, setAdjustQty] = useState('1');
 
   // form state
   const [name, setName] = useState('');
@@ -282,24 +285,63 @@ export default function Inventory() {
     }
   }
 
-  async function handleAddStock(itemId: string) {
-    const entry = prompt('Enter quantity to add (positive integer):', '1');
-    if (!entry) return;
-    const qty = Number(entry);
-    if (!qty || qty <= 0) {
-      toast.error('Invalid quantity');
+  async function handleAddStock(itemId: string, qtyValue: number = Number(adjustQty) || 1) {
+    const qty = Number(qtyValue);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      toast.error('Please enter a valid positive number.');
       return;
     }
-    const next = items.map((it) => (it.id === itemId ? { ...it, stock: it.stock + qty, status: it.stock + qty > 0 ? 'In Stock' : 'Out of Stock' } : it));
-    const item = next.find((i) => i.id === itemId)!;
+
+    const currentItem = items.find((it) => it.id === itemId);
+    if (!currentItem) return;
+
+    const nextStock = currentItem.stock + qty;
 
     try {
-      const saved = await saveInventoryRecord(item);
-      setItems(next.map((it) => (it.id === itemId ? (saved as InventoryRow) : it)));
-      await addLog({ medicine: saved.name, action: 'Stock Added', qty, notes: '' });
-      toast.success('Stock updated');
-    } catch {
+      const saved = await updateInventoryStock(itemId, nextStock);
+      const normalizedSaved = {
+        ...saved,
+        id: saved.id || itemId,
+        name: saved.name || currentItem.name,
+        stock: Number(saved.stock) || nextStock,
+        status: Number(saved.stock) > 0 ? 'In Stock' : 'Out of Stock',
+      };
+      setItems((current) => current.map((it) => (it.id === itemId ? (normalizedSaved as InventoryRow) : it)));
+      await addLog({ medicine: normalizedSaved.name, action: 'Stock Added', qty, notes: '' });
+      toast.success(`Added ${qty} to ${normalizedSaved.name}`);
+    } catch (error) {
+      console.error('[Inventory] Add stock failed', error);
       toast.error('Stock update was not saved to the database.');
+    }
+  }
+
+  async function handleReduceStock(itemId: string, qtyValue: number = Number(adjustQty) || 1) {
+    const qty = Number(qtyValue);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      toast.error('Please enter a valid positive number.');
+      return;
+    }
+
+    const currentItem = items.find((it) => it.id === itemId);
+    if (!currentItem) return;
+
+    const nextStock = Math.max(0, currentItem.stock - qty);
+
+    try {
+      const saved = await updateInventoryStock(itemId, nextStock);
+      const normalizedSaved = {
+        ...saved,
+        id: saved.id || itemId,
+        name: saved.name || currentItem.name,
+        stock: Number(saved.stock) || nextStock,
+        status: Number(saved.stock) > 0 ? 'In Stock' : 'Out of Stock',
+      };
+      setItems((current) => current.map((it) => (it.id === itemId ? (normalizedSaved as InventoryRow) : it)));
+      await addLog({ medicine: normalizedSaved.name, action: 'Stock Reduced', qty, notes: '' });
+      toast.success(`Removed ${qty} from ${normalizedSaved.name}`);
+    } catch (error) {
+      console.error('[Inventory] Reduce stock failed', error);
+      toast.error('Stock reduction was not saved to the database.');
     }
   }
 
@@ -502,7 +544,11 @@ export default function Inventory() {
             </thead>
             <tbody>
               {filtered.map((it, idx) => (
-                <tr key={it.id}>
+                <tr
+                  key={it.id}
+                  onClick={() => setSelectedItemId((current) => (current === it.id ? null : it.id))}
+                  style={{ cursor: 'pointer', background: selectedItemId === it.id ? '#f9fafb' : undefined }}
+                >
                   <td>{idx + 1}</td>
                   <td><strong>{it.name}</strong></td>
                   <td>{it.dosage || '—'}</td>
@@ -518,11 +564,45 @@ export default function Inventory() {
                   </td>
                   <td>{it.expiry ? new Date(it.expiry).toLocaleDateString() : '—'}</td>
                   <td>
-                    <div className="button-row">
-                      <button type="button" onClick={() => handleAddStock(it.id)} style={{ background: '#10b981' }}>
+                    <div className="button-row" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={adjustQty}
+                        onChange={(event) => setAdjustQty(event.target.value)}
+                        style={{ width: 70, padding: '6px 8px', borderRadius: 6, border: '1px solid #d1d5db' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleAddStock(it.id, Number(adjustQty) || 1);
+                        }}
+                        style={{ background: '#10b981' }}
+                      >
                         <Plus size={14} /> Add Stock
                       </button>
-                      <button type="button" onClick={() => handleDelete(it.id)} style={{ background: '#ef4444' }}>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleReduceStock(it.id, Number(adjustQty) || 1);
+                        }}
+                        style={{ background: '#f59e0b' }}
+                      >
+                        <Minus size={14} /> Reduce Stock
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleDelete(it.id);
+                        }}
+                        style={{ background: '#ef4444' }}
+                      >
                         <Trash size={14} /> Delete
                       </button>
                     </div>

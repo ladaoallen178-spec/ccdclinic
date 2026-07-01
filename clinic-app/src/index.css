@@ -2287,9 +2287,21 @@ th {
 
 .history-profile-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px 28px;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 18px 24px;
   align-items: center;
+}
+
+@media (max-width: 1160px) {
+  .history-profile-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .history-profile-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .history-detail {
@@ -2464,7 +2476,8 @@ th {
     .history-action-row,
     .history-back-button,
     .history-print-button,
-    .history-dashboard-button {
+    .history-dashboard-button,
+    .history-record-page button {
       display: none !important;
     }
 
