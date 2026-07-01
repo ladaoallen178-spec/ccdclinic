@@ -287,16 +287,16 @@ export async function registerNurseAccount(registration: NurseRegistration) {
 // Helper function to transform API visit format to frontend format
 function transformApiVisit(apiVisit: any): VisitRecord {
   return {
-    patientType: apiVisit.patient_type,
-    idNumber: apiVisit.student_id || apiVisit.staff_id || '',
-    patientName: apiVisit.patient_name || '',
+    patientType: apiVisit.patient_type || apiVisit.patientType || '',
+    idNumber: apiVisit.student_id || apiVisit.staff_id || apiVisit.idNumber || '',
+    patientName: apiVisit.patient_name || apiVisit.patientName || '',
     temperature: apiVisit.temperature || '',
-    bloodPressure: apiVisit.blood_pressure || '',
-    referredToHospital: apiVisit.referred_to_hospital || false,
-    reasonForVisit: apiVisit.reason_for_visit || '',
-    medicineGiven: apiVisit.medicine_given || '',
+    bloodPressure: apiVisit.blood_pressure || apiVisit.bloodPressure || '',
+    referredToHospital: apiVisit.referred_to_hospital ?? apiVisit.referredToHospital ?? false,
+    reasonForVisit: apiVisit.reason_for_visit || apiVisit.reasonForVisit || '',
+    medicineGiven: apiVisit.medicine_given || apiVisit.medicineGiven || '',
     status: apiVisit.status || 'Pending',
-    createdAt: apiVisit.created_at,
+    createdAt: apiVisit.created_at || apiVisit.createdAt || new Date().toISOString(),
   };
 }
 
