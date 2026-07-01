@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState, useRef } from 'react';
 import { Download, FileText, RefreshCcw, Search, Printer, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -29,6 +29,8 @@ export default function MasterList() {
   const [programFilter, setProgramFilter] = useState('All Programs');
   const [searchTerm, setSearchTerm] = useState('');
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
+  const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+  const [editedStudent, setEditedStudent] = useState<Partial<StudentRecord>>({});
 
   useEffect(() => {
     Promise.all([loadStudents(), loadVisits()])
@@ -79,6 +81,153 @@ export default function MasterList() {
     () => visits.filter((visit) => (visit.patientType || visit.category || '').toLowerCase() === 'student'),
     [visits],
   );
+
+  const handleEditStudent = (student: StudentRecord) => {
+    setEditingStudentId(student.id);
+    setEditedStudent({ ...student });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingStudentId(null);
+    setEditedStudent({});
+  };
+
+  const handleChangeEditedStudent = (field: keyof StudentRecord, value: string) => {
+    setEditedStudent((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveStudent = async () => {
+    if (!editingStudentId) return;
+
+    const currentStudent = students.find((student) => student.id === editingStudentId);
+    if (!currentStudent) {
+      toast.error('Unable to find the student to update.');
+      return;
+    }
+
+    const updatedStudent: StudentRecord = {
+      ...currentStudent,
+      ...editedStudent,
+      id: currentStudent.id,
+      name: editedStudent.name?.trim() || currentStudent.name,
+      section: editedStudent.section?.trim() ?? currentStudent.section,
+      concern: editedStudent.concern?.trim() ?? currentStudent.concern,
+      status: editedStudent.status ?? currentStudent.status,
+      age: editedStudent.age?.trim() ?? currentStudent.age,
+      gender: editedStudent.gender?.trim() ?? currentStudent.gender,
+      yearLevel: editedStudent.yearLevel?.trim() ?? currentStudent.yearLevel,
+      program: editedStudent.program?.trim() ?? currentStudent.program,
+      parentName: editedStudent.parentName?.trim() ?? currentStudent.parentName,
+      parentPhone: editedStudent.parentPhone?.trim() ?? currentStudent.parentPhone,
+      createdAt: currentStudent.createdAt,
+    };
+
+    try {
+      const saved = await saveStudentRecord(updatedStudent);
+      setStudents((current) => current.map((student) => (student.id === saved.id ? saved : student)));
+      toast.success('Student details updated successfully.');
+      setEditingStudentId(null);
+      setEditedStudent({});
+    } catch (error) {
+      console.error('[MasterList] Update student failed', error);
+      toast.error('Unable to save student details.');
+    }
+  };
+
+  const handleEditFieldChange = (field: keyof StudentRecord) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    handleChangeEditedStudent(field, event.target.value);
+  };
+
+  const getFieldValue = (field: keyof StudentRecord, student: StudentRecord) => {
+    return field in editedStudent ? (editedStudent[field] as string) ?? student[field] ?? '' : student[field] ?? '';
+  };
+
+  const handleStartEdit = (student: StudentRecord) => {
+    handleEditStudent(student);
+  };
+
+  const handleViewHistory = (student: StudentRecord) => {
+    setHistoryStudentId(student.id);
+  };
+
+  const isEditing = (student: StudentRecord) => editingStudentId === student.id;
+
+  const renderEditRow = (student: StudentRecord) => (
+    <tr key={`edit-${student.id}`} className="editing-row">
+      <td>{student.id}</td>
+      <td>
+        <input value={getFieldValue('name', student)} onChange={handleEditFieldChange('name')} />
+      </td>
+      <td>
+        <input value={getFieldValue('yearLevel', student)} onChange={handleEditFieldChange('yearLevel')} />
+      </td>
+      <td>
+        <input value={getFieldValue('program', student)} onChange={handleEditFieldChange('program')} />
+      </td>
+      <td>
+        <input value={getFieldValue('age', student)} onChange={handleEditFieldChange('age')} />
+      </td>
+      <td>
+        <input value={getFieldValue('gender', student)} onChange={handleEditFieldChange('gender')} />
+      </td>
+      <td>
+        <input value={getFieldValue('parentName', student)} onChange={handleEditFieldChange('parentName')} />
+      </td>
+      <td>
+        <input value={getFieldValue('parentPhone', student)} onChange={handleEditFieldChange('parentPhone')} />
+      </td>
+      <td>{formatDate(student.createdAt)}</td>
+      <td>
+        <button type="button" className="save-button" onClick={handleSaveStudent}>
+          Save
+        </button>
+        <button type="button" className="cancel-button" onClick={handleCancelEdit}>
+          Cancel
+        </button>
+      </td>
+    </tr>
+  );
+
+  const renderStudentRow = (student: StudentRecord) => (
+    <tr key={student.id}>
+      <td>{student.id}</td>
+      <td>{student.name}</td>
+      <td>{student.yearLevel || '-'}</td>
+      <td>{student.program || '-'}</td>
+      <td>{student.age || '-'}</td>
+      <td>{student.gender || '-'}</td>
+      <td>{student.parentName || '-'}</td>
+      <td>{student.parentPhone || '-'}</td>
+      <td>{formatDate(student.createdAt)}</td>
+      <td>
+        <button type="button" className="history-button" onClick={() => handleViewHistory(student)}>
+          <FileText size={15} aria-hidden="true" />
+        </button>
+        <button type="button" className="edit-button" onClick={() => handleStartEdit(student)}>
+          Edit
+        </button>
+      </td>
+    </tr>
+  );
+
+  const renderTableRows = () => {
+    if (!filteredStudents.length) {
+      return (
+        <tr>
+          <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0' }}>
+            No students found for the selected filters.
+          </td>
+        </tr>
+      );
+    }
+
+    return filteredStudents.flatMap((student) =>
+      isEditing(student) ? [renderEditRow(student)] : [renderStudentRow(student)],
+    );
+  };
 
   const handleReset = () => {
     setYearFilter('All Years');
@@ -373,33 +522,7 @@ export default function MasterList() {
             </tr>
           </thead>
           <tbody>
-            {filteredStudents.length ? (
-              filteredStudents.map((student) => (
-                <tr key={student.id}>
-                  <td>{student.id}</td>
-                  <td>{student.name}</td>
-                  <td>{student.yearLevel || '-'}</td>
-                  <td>{student.program || '-'}</td>
-                  <td>{student.age || '-'}</td>
-                  <td>{student.gender || '-'}</td>
-                  <td>{student.parentName || '-'}</td>
-                  <td>{student.parentPhone || '-'}</td>
-                  <td>{formatDate(student.createdAt)}</td>
-                  <td>
-                    <button type="button" className="history-button" onClick={() => setHistoryStudentId(student.id)}>
-                      <FileText size={15} aria-hidden="true" />
-                      View History
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0' }}>
-                  No students found for the selected filters.
-                </td>
-              </tr>
-            )}
+            {renderTableRows()}
           </tbody>
         </table>
       </article>
