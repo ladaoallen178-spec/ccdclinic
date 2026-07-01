@@ -32,7 +32,7 @@ export default function AddNewVisit() {
     const referredToHospital = form.get('referredToHospital') === 'on';
     const patientType = String(form.get('patientType') || 'Student');
     const patientName = String(form.get('patientName') || '').trim();
-    const idNumber = String(form.get('idNumber') || '').trim() || createPatientId(patientType);
+    const idNumber = String(form.get('idNumber') || '').trim();
     const selectedMedicineId = String(form.get('medicineId') || '').trim();
     const medicineQuantity = Math.max(1, Number(form.get('medicineQuantity') || 1));
     const selectedInventoryItem = inventory.find((item) => item.id === selectedMedicineId);
@@ -50,7 +50,7 @@ export default function AddNewVisit() {
       createdAt: new Date().toISOString(),
     };
 
-    if (!visit.patientName && !String(form.get('idNumber') || '').trim()) {
+    if (!visit.patientName && !idNumber) {
       toast.error('Please fill in the patient name or ID number.');
       return;
     }
@@ -68,36 +68,20 @@ export default function AddNewVisit() {
     setIsSaving(true);
     try {
       const effectiveName = patientName || idNumber;
+      let visitPatientName = patientName || undefined;
+      let visitIdNumber: string | undefined = undefined;
 
       if (patientType === 'Student') {
         const existingStudent = students.find(
           (student) => student.id === idNumber || student.name.toLowerCase() === effectiveName.toLowerCase(),
         );
-        const student: StudentRecord = existingStudent
-          ? {
-              ...existingStudent,
-              concern: visit.reasonForVisit || existingStudent.concern,
-              status: 'Pending',
-            }
-          : {
-              id: idNumber,
-              name: effectiveName,
-              age: '',
-              gender: '',
-              yearLevel: '',
-              program: '',
-              section: '',
-              parentName: '',
-              parentPhone: '',
-              concern: visit.reasonForVisit,
-              status: 'Pending',
-            };
-        const savedStudent = await saveStudentRecord(student);
-        setStudents((current) =>
-          current.some((item) => item.id === savedStudent.id)
-            ? current.map((item) => (item.id === savedStudent.id ? savedStudent : item))
-            : [savedStudent, ...current],
-        );
+
+        if (existingStudent) {
+          visitIdNumber = existingStudent.id;
+          visitPatientName = existingStudent.name;
+        } else if (!patientName && idNumber) {
+          visitPatientName = idNumber;
+        }
       } else if (patientType === 'Staff') {
         const existingStaff = staffList.find(
           (staff) => staff.id === idNumber || staff.name.toLowerCase() === effectiveName.toLowerCase(),
@@ -127,9 +111,15 @@ export default function AddNewVisit() {
             ? current.map((item) => (item.id === savedStaff.id ? savedStaff : item))
             : [savedStaff, ...current],
         );
+        visitIdNumber = savedStaff.id;
+        visitPatientName = savedStaff.name;
       }
 
-      const saved = await createVisitRecord(visit);
+      const saved = await createVisitRecord({
+        ...visit,
+        idNumber: visitIdNumber || '',
+        patientName: visitPatientName,
+      });
       setVisits([saved, ...visits]);
 
       await deductMedicineStock(visit.medicineGiven, saved, medicineName, medicineQuantity);

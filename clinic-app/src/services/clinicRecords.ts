@@ -131,6 +131,7 @@ export async function createVisitRecord(record: VisitRecord) {
     patient_type: record.patientType,
     student_id: record.idNumber && record.patientType === 'Student' ? record.idNumber : undefined,
     staff_id: record.idNumber && record.patientType === 'Staff' ? record.idNumber : undefined,
+    patient_name: record.patientName || undefined,
     temperature: record.temperature,
     blood_pressure: record.bloodPressure,
     referred_to_hospital: record.referredToHospital,
@@ -288,6 +289,7 @@ function transformApiVisit(apiVisit: any): VisitRecord {
   return {
     patientType: apiVisit.patient_type,
     idNumber: apiVisit.student_id || apiVisit.staff_id || '',
+    patientName: apiVisit.patient_name || '',
     temperature: apiVisit.temperature || '',
     bloodPressure: apiVisit.blood_pressure || '',
     referredToHospital: apiVisit.referred_to_hospital || false,
