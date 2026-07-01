@@ -54,7 +54,7 @@ function StudentEntry() {
   }, []);
 
   const pendingStudents = useMemo(() => students.filter((student) => student.status === 'Pending'), [students]);
-  const studentVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'Student'), [visits]);
+  const studentVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'student'), [visits]);
   const todaysVisits = useMemo(() => studentVisits.filter((visit) => isToday(visit.createdAt)), [studentVisits]);
   const recentVisits = useMemo(() => studentVisits.filter((visit) => isWithinLastDays(visit.createdAt, 7)), [studentVisits]);
   const visibleStudents = useMemo(() => {
@@ -66,7 +66,7 @@ function StudentEntry() {
 
     return students.filter((student) =>
       [student.id, student.name, getYearProgram(student), student.parentPhone ?? ''].some((value) =>
-        value.toLowerCase().includes(term),
+        String(value ?? '').toLowerCase().includes(term),
       ),
     );
   }, [searchTerm, students]);
@@ -155,12 +155,12 @@ function StudentEntry() {
       toast.error('Allow popups to print the receipt');
       return;
     }
-
+    receiptWindow.document.open();
     receiptWindow.document.write(receipt);
     receiptWindow.document.close();
     receiptWindow.focus();
-    receiptWindow.print();
-    toast.success('Receipt ready');
+    // Do not auto-print — allow nurse to edit comments then use the Print button in the receipt window
+    toast.success('Receipt ready — edit nurse comments then click PRINT RECEIPT');
   };
 
   const renderVisitRow = (visit: VisitRecord, includeDate: boolean) => {
@@ -436,7 +436,7 @@ function StudentEntry() {
 }
 
 function getVisitPatientType(visit: VisitRecord) {
-  return visit.patientType || visit.category || '';
+  return String(visit.patientType || visit.category || '').trim().toLowerCase();
 }
 
 function getVisitReason(visit: VisitRecord) {
@@ -581,8 +581,13 @@ function buildReceiptHtml(visit: VisitRecord, student?: StudentRecord) {
 
         <div class="section-footer">
           <div class="footer-card">
-            <p class="footer-label">Nurse Notes</p>
-            <p class="footer-value">Advice: ________________________________</p>
+            <p class="footer-label">Nurse comments / Advice (editable)</p>
+            <textarea id="nurseComment" placeholder="Advice: " style="width:100%;min-height:84px;padding:8px;border:1px solid #cbd5d9;border-radius:6px;font-size:14px">Advice: </textarea>
+            <div class="presets" style="display:flex;gap:8px;margin-top:8px">
+              <div class="preset" data-text="Advise to go home and rest" style="background:#e6f4ef;border:1px solid #c6e7db;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px">Advise: Go home & rest</div>
+              <div class="preset" data-text="Request to have a sleep" style="background:#e6f4ef;border:1px solid #c6e7db;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px">Request: Have a sleep</div>
+              <div class="preset" data-text="Drink more water and monitor" style="background:#e6f4ef;border:1px solid #c6e7db;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px">Drink more water</div>
+            </div>
           </div>
           <div class="footer-card">
             <p class="footer-label">Actions Taken</p>
@@ -601,6 +606,17 @@ function buildReceiptHtml(visit: VisitRecord, student?: StudentRecord) {
           </div>
         </div>
       </div>
+      <div style="display:flex;gap:12px;margin-top:18px;justify-content:center">
+        <button onclick="prepareAndPrint()" style="background:#1d6332;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">PRINT RECEIPT</button>
+        <button onclick="window.close()" style="background:#e6eef0;color:#234f3a;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">BACK TO DASHBOARD</button>
+      </div>
+      <script>
+        document.querySelectorAll('.preset').forEach(btn=>btn.addEventListener('click',()=>{
+          const t = document.getElementById('nurseComment');
+          if(!t) return; t.value = btn.getAttribute('data-text');
+        }));
+        function prepareAndPrint(){ window.focus(); window.print(); }
+      </script>
     </div>
   </body>
 </html>`;

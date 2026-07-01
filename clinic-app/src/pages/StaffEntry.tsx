@@ -57,7 +57,7 @@ function StaffEntry() {
   }, []);
 
   const pendingStaff = useMemo(() => staffList.filter((staff) => staff.status === 'Pending'), [staffList]);
-  const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'Staff'), [visits]);
+  const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'staff'), [visits]);
   const todaysVisits = useMemo(() => staffVisits.filter((visit) => isToday(visit.createdAt)), [staffVisits]);
   const recentVisits = useMemo(() => staffVisits.filter((visit) => isWithinLastDays(visit.createdAt, 7)), [staffVisits]);
   const visibleStaff = useMemo(() => {
@@ -69,7 +69,7 @@ function StaffEntry() {
 
     return staffList.filter((staff) =>
       [staff.id, staff.name, staff.staffType ?? '', staff.department, staff.contactNumber ?? ''].some((value) =>
-        value.toLowerCase().includes(term),
+        String(value ?? '').toLowerCase().includes(term),
       ),
     );
   }, [searchTerm, staffList]);
@@ -156,11 +156,12 @@ function StaffEntry() {
       return;
     }
 
+    receiptWindow.document.open();
     receiptWindow.document.write(receipt);
     receiptWindow.document.close();
     receiptWindow.focus();
-    receiptWindow.print();
-    toast.success('Receipt ready');
+    // Do not auto-print — allow nurse to edit comments then use the Print button in the receipt window
+    toast.success('Receipt ready — edit nurse comments then click PRINT RECEIPT');
   };
 
   const renderVisitRow = (visit: VisitRecord, includeDate: boolean) => {
@@ -437,7 +438,7 @@ function StaffType({ type }: { type?: string }) {
 }
 
 function getVisitPatientType(visit: VisitRecord) {
-  return visit.patientType || visit.category || '';
+  return String(visit.patientType || visit.category || '').trim().toLowerCase();
 }
 
 function getVisitReason(visit: VisitRecord) {
@@ -587,6 +588,10 @@ function buildReceiptHtml(visit: VisitRecord, staff?: StaffRecord) {
         <div class="sig-label">Nurse signature</div>
       </div>
       <div style="width:180px;text-align:center;color:#475467">Date: ${createdAt}</div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:18px;justify-content:center">
+      <button onclick="prepareAndPrint()" style="background:#1d6332;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">PRINT RECEIPT</button>
+      <button onclick="window.close()" style="background:#e6eef0;color:#234f3a;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">BACK TO DASHBOARD</button>
     </div>
 
     <script>
