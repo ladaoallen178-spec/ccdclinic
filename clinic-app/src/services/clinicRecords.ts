@@ -172,8 +172,10 @@ export async function createVisitRecord(record: VisitRecord) {
 
 export async function confirmVisitRecord(id: string) {
   try {
+    console.debug('[confirmVisitRecord] calling', `/api/visits/${id}/confirm`);
     const response = await api.post(`/api/visits/${id}/confirm`, {});
     const visit = transformApiVisit(response.data);
+    console.debug('[confirmVisitRecord] response', visit);
     saveVisits(upsertVisit(getVisits(), visit));
     return visit;
   } catch (error) {
@@ -326,12 +328,14 @@ function transformApiVisit(apiVisit: any): VisitRecord {
     patientType: apiVisit.patient_type || apiVisit.patientType || '',
     idNumber: apiVisit.student_id || apiVisit.staff_id || apiVisit.idNumber || '',
     patientName: apiVisit.patient_name || apiVisit.patientName || '',
-    temperature: apiVisit.temperature || '',
+    temperature: apiVisit.temperature || apiVisit.blood_pressure || apiVisit.bloodPressure || '',
     bloodPressure: apiVisit.blood_pressure || apiVisit.bloodPressure || '',
     referredToHospital: apiVisit.referred_to_hospital ?? apiVisit.referredToHospital ?? false,
     reasonForVisit: apiVisit.reason_for_visit || apiVisit.reasonForVisit || '',
     medicineGiven: apiVisit.medicine_given || apiVisit.medicineGiven || '',
     status: apiVisit.status || 'Pending',
+    visitDate: apiVisit.visit_date || apiVisit.visitDate || undefined,
+    confirmedAt: apiVisit.confirmed_at || apiVisit.confirmedAt || undefined,
     createdAt: apiVisit.created_at || apiVisit.createdAt || new Date().toISOString(),
   };
 }

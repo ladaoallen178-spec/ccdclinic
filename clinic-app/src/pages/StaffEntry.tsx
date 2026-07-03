@@ -118,6 +118,7 @@ function StaffEntry() {
 
     try {
       const savedVisit = await confirmVisitRecord(visit.id);
+      console.debug('[StaffEntry] confirmed visit', savedVisit);
       const matchingStaff = staffList.find((staff) => staff.id === savedVisit.idNumber);
       const hasOtherPendingVisit = visits.some(
         (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),

@@ -49,6 +49,8 @@ export type VisitRecord = {
   reasonForVisit: string;
   medicineGiven: string;
   status: string;
+  visitDate?: string;
+  confirmedAt?: string;
   createdAt?: string;
   patientName?: string;
   yearProgram?: string;

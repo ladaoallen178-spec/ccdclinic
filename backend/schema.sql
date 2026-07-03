@@ -80,17 +80,20 @@ CREATE TABLE IF NOT EXISTS visits (
     patient_type VARCHAR(50) NOT NULL CHECK (patient_type IN ('Student', 'Staff')),
     student_id VARCHAR(50) REFERENCES students(id) ON DELETE CASCADE,
     staff_id VARCHAR(50) REFERENCES staff(id) ON DELETE CASCADE,
+    patient_name VARCHAR(255),
     temperature VARCHAR(20),       -- Body temp e.g. "36.8"
     blood_pressure VARCHAR(20),    -- BP e.g. "120/80"
     referred_to_hospital BOOLEAN NOT NULL DEFAULT FALSE,
     reason_for_visit TEXT NOT NULL,
     medicine_given VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- 'Pending', 'Confirmed', 'Completed', etc.
+    visit_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    confirmed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
     -- Ensure exactly one patient reference is filled based on patient_type
     CONSTRAINT chk_visit_patient_reference CHECK (
-        (patient_type = 'Student' AND student_id IS NOT NULL AND staff_id IS NULL) OR
+        (patient_type = 'Student' AND (student_id IS NOT NULL OR patient_name IS NOT NULL) AND staff_id IS NULL) OR
         (patient_type = 'Staff' AND staff_id IS NOT NULL AND student_id IS NULL)
     )
 );

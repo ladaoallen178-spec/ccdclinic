@@ -117,6 +117,7 @@ function StudentEntry() {
 
     try {
       const savedVisit = await confirmVisitRecord(visit.id);
+      console.debug('[StudentEntry] confirmed visit', savedVisit);
       const matchingStudent = students.find((student) => student.id === savedVisit.idNumber);
       const hasOtherPendingVisit = visits.some(
         (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
