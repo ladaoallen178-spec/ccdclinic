@@ -7,6 +7,6 @@ use axum::{
 pub fn visit_routes() -> Router {
     Router::new()
         .route("/", post(create_visit).get(get_visits))
-        .route("/{id}/confirm", patch(confirm_visit))
+        .route("/{id}/confirm", patch(confirm_visit).post(confirm_visit))
         .route("/{id}", get(get_visit).delete(delete_visit))
 }

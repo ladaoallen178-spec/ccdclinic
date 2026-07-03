@@ -121,15 +121,19 @@ function StudentEntry() {
       const hasOtherPendingVisit = visits.some(
         (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
       );
-      if (matchingStudent && !hasOtherPendingVisit) {
-        const savedStudent = await saveStudentRecord({ ...matchingStudent, status: 'Cleared' });
-        setStudents((current) => current.map((item) => (item.id === savedStudent.id ? savedStudent : item)));
-      }
       setVisits((current) => current.map((item) => (item.id === savedVisit.id ? savedVisit : item)));
       setActiveTab('today');
       toast.success('Student visit confirmed');
-    } catch {
-      toast.error('Student visit was not confirmed in the database.');
+      if (matchingStudent && !hasOtherPendingVisit) {
+        try {
+          const savedStudent = await saveStudentRecord({ ...matchingStudent, status: 'Cleared' });
+          setStudents((current) => current.map((item) => (item.id === savedStudent.id ? savedStudent : item)));
+        } catch (error) {
+          console.warn('[STUDENT ENTRY] Visit confirmed, but student status cleanup failed', error);
+        }
+      }
+    } catch (error) {
+      toast.error(`Student visit was not confirmed: ${getErrorMessage(error)}`);
     }
   };
 
@@ -513,6 +517,14 @@ function isSameLocalDate(left: Date, right: Date) {
 
 function isValidDate(date: Date) {
   return Number.isFinite(date.getTime());
+}
+
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message?: unknown }).message || 'Unknown error');
+  }
+
+  return 'Unknown error';
 }
 
 function getInitials(name: string) {

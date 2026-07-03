@@ -172,7 +172,7 @@ export async function createVisitRecord(record: VisitRecord) {
 
 export async function confirmVisitRecord(id: string) {
   try {
-    const response = await api.patch(`/api/visits/${id}/confirm`);
+    const response = await api.post(`/api/visits/${id}/confirm`, {});
     const visit = transformApiVisit(response.data);
     saveVisits(upsertVisit(getVisits(), visit));
     return visit;
