@@ -190,6 +190,7 @@ const defaultNurses: NurseRecord[] = [];
 
 const defaultVisits: VisitRecord[] = [
   {
+    id: 'VISIT-S-1001-1',
     patientType: 'Student',
     idNumber: 'S-1001',
     temperature: '36.8',
@@ -203,6 +204,7 @@ const defaultVisits: VisitRecord[] = [
     yearProgram: 'Grade 10 - A',
   },
   {
+    id: 'VISIT-T-2001-1',
     patientType: 'Staff',
     idNumber: 'T-2001',
     temperature: '36.5',
@@ -286,12 +288,52 @@ export function saveNurses(nurses: NurseRecord[]) {
 
 export function getVisits() {
   const v = readStorage('clinic-visits', defaultVisits);
-  return Array.isArray(v) ? (v as VisitRecord[]) : defaultVisits;
+  const visits = Array.isArray(v) ? (v as VisitRecord[]) : defaultVisits;
+  const normalized = normalizeVisits(visits);
+
+  if (!visits.every((visit, index) => visit.id && visit.id === normalized[index]?.id)) {
+    saveVisits(normalized);
+  }
+
+  return normalized;
 }
 
 export function saveVisits(visits: VisitRecord[]) {
   localStorage.setItem('clinic-visits', JSON.stringify(visits));
   notifyClinicDataChanged();
+}
+
+function normalizeVisits(visits: VisitRecord[]) {
+  return visits.map(normalizeVisitRecord);
+}
+
+function normalizeVisitRecord(visit: VisitRecord) {
+  return {
+    ...visit,
+    id: visit.id || generateFallbackVisitId(visit),
+  };
+}
+
+function generateFallbackVisitId(visit: VisitRecord) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const base = `${visit.patientType || 'visit'}-${visit.idNumber || visit.patientName || 'unknown'}`
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 48);
+  const seed = visit.createdAt || `${visit.patientType}-${visit.idNumber}-${visit.patientName || ''}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return `LOCAL-${base || 'VISIT'}-${Math.abs(hash).toString(36)}`;
+}
+
+export function isValidVisitId(id?: string) {
+  return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
 
 export function getInventory() {

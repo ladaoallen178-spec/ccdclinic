@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
-import { getStaff, getVisits } from '../utils/clinicData';
+import { getStaff, getVisits, isValidVisitId } from '../utils/clinicData';
 import type { StaffRecord, VisitRecord } from '../utils/clinicData';
 import { confirmVisitRecord, deleteVisitRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
 
@@ -111,8 +111,8 @@ function StaffEntry() {
   };
 
   const confirmStaffVisit = async (visit: VisitRecord) => {
-    if (!visit.id) {
-      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+    if (!isValidVisitId(visit.id)) {
+      toast.error('This visit cannot be confirmed because it is not backed by a valid database record. Reload the page and try again.');
       return;
     }
 
@@ -140,8 +140,8 @@ function StaffEntry() {
   };
 
   const rejectStaffVisit = async (visit: VisitRecord) => {
-    if (!visit.id) {
-      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+    if (!isValidVisitId(visit.id)) {
+      toast.error('This visit cannot be removed because it is not backed by a valid database record. Reload the page and try again.');
       return;
     }
 
