@@ -185,6 +185,7 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
 export default {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, data: unknown) => request<T>('POST', url, data),
+  patch: <T>(url: string, data?: unknown) => request<T>('PATCH', url, data),
   put: <T>(url: string, data: unknown) => request<T>('PUT', url, data),
   delete: <T>(url: string) => request<T>('DELETE', url),
 };

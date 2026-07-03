@@ -239,13 +239,30 @@ async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
             referred_to_hospital BOOLEAN NOT NULL DEFAULT FALSE,
             reason_for_visit TEXT NOT NULL,
             medicine_given VARCHAR(255),
-            status VARCHAR(50) NOT NULL DEFAULT 'Completed',
+            status VARCHAR(50) NOT NULL DEFAULT 'Pending',
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             CONSTRAINT chk_visit_patient_reference CHECK (
                 (patient_type = 'Student' AND student_id IS NOT NULL AND staff_id IS NULL) OR
                 (patient_type = 'Staff' AND staff_id IS NOT NULL AND student_id IS NULL)
             )
         )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE visits
+        ALTER COLUMN status SET DEFAULT 'Pending'
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE INDEX IF NOT EXISTS idx_visits_status ON visits(status)
         "#,
     )
     .execute(pool)

@@ -20,7 +20,7 @@ import {
   getVisits,
 } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
-import { createVisitRecord, deleteStudentRecord, loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
+import { confirmVisitRecord, deleteVisitRecord, loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
 
 type StudentTab = 'pending' | 'today' | 'recent' | 'manage';
 
@@ -53,10 +53,10 @@ function StudentEntry() {
     };
   }, []);
 
-  const pendingStudents = useMemo(() => students.filter((student) => student.status === 'Pending'), [students]);
   const studentVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'student'), [visits]);
-  const todaysVisits = useMemo(() => studentVisits.filter((visit) => isToday(visit.createdAt)), [studentVisits]);
-  const recentVisits = useMemo(() => studentVisits.filter((visit) => isWithinLastDays(visit.createdAt, 7)), [studentVisits]);
+  const pendingStudentVisits = useMemo(() => studentVisits.filter(isPendingVisit), [studentVisits]);
+  const todaysVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isToday(visit.createdAt)), [studentVisits]);
+  const recentVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(visit.createdAt, 7)), [studentVisits]);
   const visibleStudents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -109,40 +109,42 @@ function StudentEntry() {
     }
   };
 
-  const confirmStudent = async (student: StudentRecord) => {
-    const visit: VisitRecord = {
-      patientType: 'Student',
-      idNumber: student.id,
-      patientName: student.name,
-      yearProgram: getYearProgram(student),
-      temperature: '',
-      bloodPressure: '',
-      referredToHospital: false,
-      reasonForVisit: student.concern || 'Clinic visit',
-      medicineGiven: '',
-      status: 'Completed',
-      createdAt: new Date().toISOString(),
-    };
+  const confirmStudentVisit = async (visit: VisitRecord) => {
+    if (!visit.id) {
+      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+      return;
+    }
 
     try {
-        const savedStudent = await saveStudentRecord({ ...student, status: 'Cleared' });
-      const savedVisit = await createVisitRecord(visit);
-      setStudents((current) => current.map((item) => (item.id === student.id ? savedStudent : item)));
-      setVisits((current) => [savedVisit, ...current]);
+      const savedVisit = await confirmVisitRecord(visit.id);
+      const matchingStudent = students.find((student) => student.id === savedVisit.idNumber);
+      const hasOtherPendingVisit = visits.some(
+        (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
+      );
+      if (matchingStudent && !hasOtherPendingVisit) {
+        const savedStudent = await saveStudentRecord({ ...matchingStudent, status: 'Cleared' });
+        setStudents((current) => current.map((item) => (item.id === savedStudent.id ? savedStudent : item)));
+      }
+      setVisits((current) => current.map((item) => (item.id === savedVisit.id ? savedVisit : item)));
       setActiveTab('today');
       toast.success('Student visit confirmed');
     } catch {
-      toast.error('Student visit was not saved to the database.');
+      toast.error('Student visit was not confirmed in the database.');
     }
   };
 
-  const rejectStudent = async (id: string) => {
+  const rejectStudentVisit = async (visit: VisitRecord) => {
+    if (!visit.id) {
+      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+      return;
+    }
+
     try {
-      await deleteStudentRecord(id);
-      setStudents(students.filter((student) => student.id !== id));
+      await deleteVisitRecord(visit.id);
+      setVisits((current) => current.filter((item) => item.id !== visit.id));
       toast.success('Pending request removed');
     } catch {
-      toast.error('Student record was not removed from the database.');
+      toast.error('Pending request was not removed from the database.');
     }
   };
 
@@ -200,7 +202,7 @@ function StudentEntry() {
           <button key={id} type="button" className={activeTab === id ? 'student-tab active' : 'student-tab'} onClick={() => setActiveTab(id)}>
             <Icon size={17} aria-hidden="true" />
             <span>{label}</span>
-            {id === 'pending' ? <em>{pendingStudents.length}</em> : null}
+            {id === 'pending' ? <em>{pendingStudentVisits.length}</em> : null}
           </button>
         ))}
       </nav>
@@ -212,31 +214,39 @@ function StudentEntry() {
             Pending Student Requests
           </h2>
           <div className="pending-list">
-            {pendingStudents.length ? (
-              pendingStudents.map((student) => (
-                <div className="pending-request" key={student.id}>
-                  <span className="student-avatar">{getInitials(student.name)}</span>
+            {pendingStudentVisits.length ? (
+              pendingStudentVisits.map((visit) => {
+                const student = findStudentByVisit(visit, students);
+                const studentName = visit.patientName || student?.name || 'Unknown Student';
+                const studentId = visit.idNumber || student?.id || '-';
+                const yearProgram = student ? getYearProgram(student) : visit.yearProgram || '';
+                const createdAt = visit.createdAt ? new Date(visit.createdAt) : null;
+
+                return (
+                <div className="pending-request" key={visit.id || `${visit.createdAt}-${visit.idNumber}`}>
+                  <span className="student-avatar">{getInitials(studentName)}</span>
                   <div>
                     <strong>
-                      {student.name}
-                      <small>{student.id}</small>
+                      {studentName}
+                      <small>{studentId}</small>
                     </strong>
                     <p>
-                      {student.concern || 'Clinic request'} <span>{getYearProgram(student)}</span>
+                      {getVisitReason(visit) || 'Clinic request'} <span>{yearProgram}</span>
                     </p>
-                    <time>{formatDate(new Date())}</time>
+                    <time>{createdAt && isValidDate(createdAt) ? formatDate(createdAt) : '-'}</time>
                   </div>
                   <div className="pending-actions">
-                    <button type="button" className="confirm-button" onClick={() => confirmStudent(student)}>
+                    <button type="button" className="confirm-button" onClick={() => confirmStudentVisit(visit)}>
                       <Check size={17} aria-hidden="true" />
                       Confirm
                     </button>
-                    <button type="button" className="reject-button" aria-label={`Remove ${student.name}`} onClick={() => rejectStudent(student.id)}>
+                    <button type="button" className="reject-button" aria-label={`Remove ${studentName}`} onClick={() => rejectStudentVisit(visit)}>
                       <X size={18} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
-              ))
+                );
+              })
             ) : (
               <p className="empty-state">No pending student requests</p>
             )}
@@ -443,6 +453,19 @@ function getVisitReason(visit: VisitRecord) {
   return visit.reasonForVisit || visit.concern || '';
 }
 
+function getVisitStatus(visit: VisitRecord) {
+  return String(visit.status || '').trim().toLowerCase();
+}
+
+function isPendingVisit(visit: VisitRecord) {
+  return getVisitStatus(visit) === 'pending';
+}
+
+function isResolvedVisit(visit: VisitRecord) {
+  const status = getVisitStatus(visit);
+  return status === 'confirmed' || status === 'completed';
+}
+
 function getYearProgram(student: StudentRecord) {
   return student.section || [student.yearLevel, student.program].filter(Boolean).join('/');
 }
@@ -457,8 +480,12 @@ function isToday(value?: string) {
   }
 
   const date = new Date(value);
+  if (!isValidDate(date)) {
+    return false;
+  }
+
   const now = new Date();
-  return date.toDateString() === now.toDateString();
+  return isSameLocalDate(date, now);
 }
 
 function isWithinLastDays(value: string | undefined, days: number) {
@@ -467,9 +494,25 @@ function isWithinLastDays(value: string | undefined, days: number) {
   }
 
   const date = new Date(value).getTime();
+  if (!Number.isFinite(date)) {
+    return false;
+  }
+
   const now = Date.now();
   const range = days * 24 * 60 * 60 * 1000;
   return date <= now && now - date <= range;
+}
+
+function isSameLocalDate(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function isValidDate(date: Date) {
+  return Number.isFinite(date.getTime());
 }
 
 function getInitials(name: string) {

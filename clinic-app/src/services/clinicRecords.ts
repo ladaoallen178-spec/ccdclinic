@@ -79,38 +79,56 @@ export async function loadStudents() {
 export async function saveStudentRecord(record: StudentRecord) {
   try {
     const response = await api.post('/api/students', toApiStudentPayload(record));
-    return transformApiStudent(response.data);
+    const student = transformApiStudent(response.data);
+    saveStudents(upsertById(getStudents(), student));
+    return student;
   } catch (error) {
     console.error('[saveStudentRecord] API error:', error);
-    const students = upsertById(getStudents(), record);
-    saveStudents(students);
-    return record;
+    throw error;
   }
 }
 
 export async function deleteStudentRecord(id: string) {
   try {
     await api.delete(`/api/students/${id}`);
+    saveStudents(getStudents().filter((student) => student.id !== id));
   } catch (error) {
     console.error('[deleteStudentRecord] API error:', error);
-    // Fallback to localStorage
-    saveStudents(getStudents().filter((student) => student.id !== id));
+    throw error;
   }
 }
 
 // === STAFF ===
 export async function loadStaff() {
-  return getStaff();
+  try {
+    const response = await api.get('/api/staff');
+    return ((response.data || []) as any[]).map(transformApiStaff);
+  } catch (error) {
+    console.warn('[loadStaff] API error, falling back to localStorage:', error);
+    return getStaff();
+  }
 }
 
 export async function saveStaffRecord(record: StaffRecord) {
-  const staff = upsertById(getStaff(), record);
-  saveStaff(staff);
-  return record;
+  try {
+    const response = await api.post('/api/staff', toApiStaffPayload(record));
+    const staff = transformApiStaff(response.data);
+    saveStaff(upsertById(getStaff(), staff));
+    return staff;
+  } catch (error) {
+    console.error('[saveStaffRecord] API error:', error);
+    throw error;
+  }
 }
 
 export async function deleteStaffRecord(id: string) {
-  saveStaff(getStaff().filter((staff) => staff.id !== id));
+  try {
+    await api.delete(`/api/staff/${id}`);
+    saveStaff(getStaff().filter((staff) => staff.id !== id));
+  } catch (error) {
+    console.error('[deleteStaffRecord] API error:', error);
+    throw error;
+  }
 }
 
 // === VISITS ===
@@ -144,16 +162,33 @@ export async function createVisitRecord(record: VisitRecord) {
     const response = await api.post('/api/visits', apiPayload);
     const apiVisit = response.data as any;
     const visit = transformApiVisit(apiVisit);
-    saveVisits([visit, ...getVisits()]);
+    saveVisits(upsertVisit(getVisits(), visit));
     return visit;
   } catch (error) {
     console.error('[createVisitRecord] API error:', error);
-    const visit = {
-      ...record,
-      createdAt: record.createdAt || new Date().toISOString(),
-    };
-    saveVisits([visit, ...getVisits()]);
+    throw error;
+  }
+}
+
+export async function confirmVisitRecord(id: string) {
+  try {
+    const response = await api.patch(`/api/visits/${id}/confirm`);
+    const visit = transformApiVisit(response.data);
+    saveVisits(upsertVisit(getVisits(), visit));
     return visit;
+  } catch (error) {
+    console.error('[confirmVisitRecord] API error:', error);
+    throw error;
+  }
+}
+
+export async function deleteVisitRecord(id: string) {
+  try {
+    await api.delete(`/api/visits/${id}`);
+    saveVisits(getVisits().filter((visit) => visit.id !== id));
+  } catch (error) {
+    console.error('[deleteVisitRecord] API error:', error);
+    throw error;
   }
 }
 
@@ -287,6 +322,7 @@ export async function registerNurseAccount(registration: NurseRegistration) {
 // Helper function to transform API visit format to frontend format
 function transformApiVisit(apiVisit: any): VisitRecord {
   return {
+    id: apiVisit.id || undefined,
     patientType: apiVisit.patient_type || apiVisit.patientType || '',
     idNumber: apiVisit.student_id || apiVisit.staff_id || apiVisit.idNumber || '',
     patientName: apiVisit.patient_name || apiVisit.patientName || '',
@@ -317,6 +353,23 @@ function transformApiStudent(apiStudent: any): StudentRecord {
   };
 }
 
+function transformApiStaff(apiStaff: any): StaffRecord {
+  return {
+    id: apiStaff.id || '',
+    name: apiStaff.name || '',
+    department: apiStaff.department || '',
+    concern: apiStaff.concern || '',
+    status: apiStaff.status || 'Cleared',
+    age: apiStaff.age == null ? '' : String(apiStaff.age),
+    gender: apiStaff.gender || '',
+    staffType: apiStaff.staff_type || apiStaff.staffType || '',
+    position: apiStaff.position || '',
+    contactNumber: apiStaff.contact_number || apiStaff.contactNumber || '',
+    email: apiStaff.email || '',
+    createdAt: apiStaff.created_at || apiStaff.createdAt,
+  };
+}
+
 function toApiStudentPayload(record: StudentRecord) {
   return {
     id: record.id,
@@ -330,6 +383,22 @@ function toApiStudentPayload(record: StudentRecord) {
     program: emptyToUndefined(record.program),
     parent_name: emptyToUndefined(record.parentName),
     parent_phone: emptyToUndefined(record.parentPhone),
+  };
+}
+
+function toApiStaffPayload(record: StaffRecord) {
+  return {
+    id: record.id,
+    name: record.name,
+    department: emptyToUndefined(record.department),
+    concern: emptyToUndefined(record.concern),
+    status: record.status,
+    age: toOptionalInteger(record.age),
+    gender: emptyToUndefined(record.gender),
+    staff_type: emptyToUndefined(record.staffType),
+    position: emptyToUndefined(record.position),
+    contact_number: emptyToUndefined(record.contactNumber),
+    email: emptyToUndefined(record.email),
   };
 }
 
@@ -383,6 +452,18 @@ function upsertById<T extends { id: string }>(records: T[], record: T) {
   return records.some((item) => item.id === record.id)
     ? records.map((item) => (item.id === record.id ? record : item))
     : [record, ...records];
+}
+
+function upsertVisit(records: VisitRecord[], record: VisitRecord) {
+  if (!record.id) {
+    return sortNewest([record, ...records]);
+  }
+
+  const next = records.some((item) => item.id === record.id)
+    ? records.map((item) => (item.id === record.id ? record : item))
+    : [record, ...records];
+
+  return sortNewest(next);
 }
 
 function sortNewest<T extends { createdAt?: string }>(records: T[]) {

@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS visits (
     referred_to_hospital BOOLEAN NOT NULL DEFAULT FALSE,
     reason_for_visit TEXT NOT NULL,
     medicine_given VARCHAR(255),
-    status VARCHAR(50) NOT NULL DEFAULT 'Completed', -- 'Pending', 'Completed', etc.
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending', -- 'Pending', 'Confirmed', 'Completed', etc.
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
     -- Ensure exactly one patient reference is filled based on patient_type
@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS visits (
 );
 
 CREATE INDEX IF NOT EXISTS idx_visits_patient_type ON visits(patient_type);
+CREATE INDEX IF NOT EXISTS idx_visits_status ON visits(status);
 CREATE INDEX IF NOT EXISTS idx_visits_created_at ON visits(created_at);
 CREATE INDEX IF NOT EXISTS idx_visits_student_id ON visits(student_id) WHERE student_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_visits_staff_id ON visits(staff_id) WHERE staff_id IS NOT NULL;
