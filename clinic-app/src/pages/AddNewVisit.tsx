@@ -46,7 +46,7 @@ export default function AddNewVisit() {
       referredToHospital,
       reasonForVisit: String(form.get('reasonForVisit') || '').trim(),
       medicineGiven: String(form.get('medicineGiven') || '').trim(),
-      status: referredToHospital ? 'Referred' : 'Pending',
+      status: 'Pending',
       createdAt: new Date().toISOString(),
     };
 
@@ -75,13 +75,34 @@ export default function AddNewVisit() {
         const existingStudent = students.find(
           (student) => student.id === idNumber || student.name.toLowerCase() === effectiveName.toLowerCase(),
         );
+        const student: StudentRecord = existingStudent
+          ? {
+              ...existingStudent,
+              concern: visit.reasonForVisit || existingStudent.concern,
+              status: 'Pending',
+            }
+          : {
+              id: idNumber || createPatientId(patientType),
+              name: effectiveName,
+              age: '',
+              gender: '',
+              yearLevel: '',
+              program: '',
+              section: '',
+              parentName: '',
+              parentPhone: '',
+              concern: visit.reasonForVisit,
+              status: 'Pending',
+            };
+        const savedStudent = await saveStudentRecord(student);
+        setStudents((current) =>
+          current.some((item) => item.id === savedStudent.id)
+            ? current.map((item) => (item.id === savedStudent.id ? savedStudent : item))
+            : [savedStudent, ...current],
+        );
+        visitIdNumber = savedStudent.id;
+        visitPatientName = savedStudent.name;
 
-        if (existingStudent) {
-          visitIdNumber = existingStudent.id;
-          visitPatientName = existingStudent.name;
-        } else if (!patientName && idNumber) {
-          visitPatientName = idNumber;
-        }
       } else if (patientType === 'Staff') {
         const existingStaff = staffList.find(
           (staff) => staff.id === idNumber || staff.name.toLowerCase() === effectiveName.toLowerCase(),
@@ -120,7 +141,7 @@ export default function AddNewVisit() {
         idNumber: visitIdNumber || '',
         patientName: visitPatientName,
       });
-      setVisits([saved, ...visits]);
+      setVisits((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
 
       await deductMedicineStock(visit.medicineGiven, saved, medicineName, medicineQuantity);
 

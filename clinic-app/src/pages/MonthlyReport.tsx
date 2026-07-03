@@ -141,11 +141,31 @@ export default function MonthlyReport() {
       </html>
     `;
     const win = window.open('', '_blank', 'width=900,height=900');
-    if (!win) return;
+    if (!win) {
+      return;
+    }
+
     win.document.open();
     win.document.write(html);
     win.document.close();
-    setTimeout(() => win.print(), 300);
+    win.onload = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        // ignore print errors when blocked
+      }
+    };
+    setTimeout(() => {
+      if (!win.closed) {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          // ignore fallback print errors
+        }
+      }
+    }, 800);
   }
 
   async function exportPdf() {

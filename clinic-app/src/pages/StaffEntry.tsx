@@ -19,7 +19,7 @@ import toast from 'react-hot-toast';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStaff, getVisits } from '../utils/clinicData';
 import type { StaffRecord, VisitRecord } from '../utils/clinicData';
-import { createVisitRecord, deleteStaffRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
+import { confirmVisitRecord, deleteVisitRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
 
 type StaffTab = 'pending' | 'today' | 'recent' | 'manage';
 
@@ -56,10 +56,10 @@ function StaffEntry() {
     };
   }, []);
 
-  const pendingStaff = useMemo(() => staffList.filter((staff) => staff.status === 'Pending'), [staffList]);
-  const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'Staff'), [visits]);
-  const todaysVisits = useMemo(() => staffVisits.filter((visit) => isToday(visit.createdAt)), [staffVisits]);
-  const recentVisits = useMemo(() => staffVisits.filter((visit) => isWithinLastDays(visit.createdAt, 7)), [staffVisits]);
+  const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'staff'), [visits]);
+  const pendingStaffVisits = useMemo(() => staffVisits.filter(isPendingVisit), [staffVisits]);
+  const todaysVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isToday(visit.createdAt)), [staffVisits]);
+  const recentVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(visit.createdAt, 7)), [staffVisits]);
   const visibleStaff = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -69,7 +69,7 @@ function StaffEntry() {
 
     return staffList.filter((staff) =>
       [staff.id, staff.name, staff.staffType ?? '', staff.department, staff.contactNumber ?? ''].some((value) =>
-        value.toLowerCase().includes(term),
+        String(value ?? '').toLowerCase().includes(term),
       ),
     );
   }, [searchTerm, staffList]);
@@ -110,39 +110,46 @@ function StaffEntry() {
     }
   };
 
-  const confirmStaff = async (staff: StaffRecord) => {
-    const visit: VisitRecord = {
-      patientType: 'Staff',
-      idNumber: staff.id,
-      patientName: staff.name,
-      temperature: '',
-      bloodPressure: '',
-      referredToHospital: false,
-      reasonForVisit: staff.concern || 'Clinic visit',
-      medicineGiven: '',
-      status: 'Completed',
-      createdAt: new Date().toISOString(),
-    };
+  const confirmStaffVisit = async (visit: VisitRecord) => {
+    if (!visit.id) {
+      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+      return;
+    }
 
     try {
-        const savedStaff = await saveStaffRecord({ ...staff, status: 'Cleared' });
-      const savedVisit = await createVisitRecord(visit);
-      setStaffList((current) => current.map((item) => (item.id === staff.id ? savedStaff : item)));
-      setVisits((current) => [savedVisit, ...current]);
+      const savedVisit = await confirmVisitRecord(visit.id);
+      const matchingStaff = staffList.find((staff) => staff.id === savedVisit.idNumber);
+      const hasOtherPendingVisit = visits.some(
+        (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
+      );
+      setVisits((current) => current.map((item) => (item.id === savedVisit.id ? savedVisit : item)));
       setActiveTab('today');
       toast.success('Staff visit confirmed');
-    } catch {
-      toast.error('Staff visit was not saved to the database.');
+      if (matchingStaff && !hasOtherPendingVisit) {
+        try {
+          const savedStaff = await saveStaffRecord({ ...matchingStaff, status: 'Cleared' });
+          setStaffList((current) => current.map((item) => (item.id === savedStaff.id ? savedStaff : item)));
+        } catch (error) {
+          console.warn('[STAFF ENTRY] Visit confirmed, but staff status cleanup failed', error);
+        }
+      }
+    } catch (error) {
+      toast.error(`Staff visit was not confirmed: ${getErrorMessage(error)}`);
     }
   };
 
-  const rejectStaff = async (id: string) => {
+  const rejectStaffVisit = async (visit: VisitRecord) => {
+    if (!visit.id) {
+      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+      return;
+    }
+
     try {
-      await deleteStaffRecord(id);
-      setStaffList(staffList.filter((staff) => staff.id !== id));
+      await deleteVisitRecord(visit.id);
+      setVisits((current) => current.filter((item) => item.id !== visit.id));
       toast.success('Pending request removed');
     } catch {
-      toast.error('Staff record was not removed from the database.');
+      toast.error('Pending request was not removed from the database.');
     }
   };
 
@@ -156,11 +163,12 @@ function StaffEntry() {
       return;
     }
 
+    receiptWindow.document.open();
     receiptWindow.document.write(receipt);
     receiptWindow.document.close();
     receiptWindow.focus();
-    receiptWindow.print();
-    toast.success('Receipt ready');
+    // Do not auto-print — allow nurse to edit comments then use the Print button in the receipt window
+    toast.success('Receipt ready — edit nurse comments then click PRINT RECEIPT');
   };
 
   const renderVisitRow = (visit: VisitRecord, includeDate: boolean) => {
@@ -201,7 +209,7 @@ function StaffEntry() {
           <button key={id} type="button" className={activeTab === id ? 'student-tab active' : 'student-tab'} onClick={() => setActiveTab(id)}>
             <Icon size={17} aria-hidden="true" />
             <span>{label}</span>
-            {id === 'pending' ? <em>{pendingStaff.length}</em> : null}
+            {id === 'pending' ? <em>{pendingStaffVisits.length}</em> : null}
           </button>
         ))}
       </nav>
@@ -213,34 +221,42 @@ function StaffEntry() {
             Pending Staff Requests
           </h2>
           <div className="pending-list">
-            {pendingStaff.length ? (
-              pendingStaff.map((staff) => (
-                <div className="pending-request" key={staff.id}>
-                  <span className="student-avatar">{getInitials(staff.name)}</span>
+            {pendingStaffVisits.length ? (
+              pendingStaffVisits.map((visit) => {
+                const staff = findStaffByVisit(visit, staffList);
+                const staffName = visit.patientName || staff?.name || 'Unknown Staff';
+                const staffId = visit.idNumber || staff?.id || '-';
+                const department = staff?.department || 'Department not set';
+                const createdAt = visit.createdAt ? new Date(visit.createdAt) : null;
+
+                return (
+                <div className="pending-request" key={visit.id || `${visit.createdAt}-${visit.idNumber}`}>
+                  <span className="student-avatar">{getInitials(staffName)}</span>
                   <div>
                     <strong>
-                      {staff.name}
-                      <small>{staff.id}</small>
+                      {staffName}
+                      <small>{staffId}</small>
                       <span className="staff-type-chip">
-                        <StaffType type={staff.staffType} />
+                        <StaffType type={staff?.staffType} />
                       </span>
                     </strong>
                     <p>
-                      {staff.concern || 'Clinic request'} <span>{staff.department || 'Department not set'}</span>
+                      {getVisitReason(visit) || 'Clinic request'} <span>{department}</span>
                     </p>
-                    <time>{formatDate(new Date())}</time>
+                    <time>{createdAt && isValidDate(createdAt) ? formatDate(createdAt) : '-'}</time>
                   </div>
                   <div className="pending-actions">
-                    <button type="button" className="confirm-button" onClick={() => confirmStaff(staff)}>
+                    <button type="button" className="confirm-button" onClick={() => confirmStaffVisit(visit)}>
                       <Check size={17} aria-hidden="true" />
                       Confirm
                     </button>
-                    <button type="button" className="reject-button" aria-label={`Remove ${staff.name}`} onClick={() => rejectStaff(staff.id)}>
+                    <button type="button" className="reject-button" aria-label={`Remove ${staffName}`} onClick={() => rejectStaffVisit(visit)}>
                       <X size={18} aria-hidden="true" />
                     </button>
                   </div>
                 </div>
-              ))
+                );
+              })
             ) : (
               <p className="empty-state">No pending staff requests</p>
             )}
@@ -437,11 +453,24 @@ function StaffType({ type }: { type?: string }) {
 }
 
 function getVisitPatientType(visit: VisitRecord) {
-  return visit.patientType || visit.category || '';
+  return String(visit.patientType || visit.category || '').trim().toLowerCase();
 }
 
 function getVisitReason(visit: VisitRecord) {
   return visit.reasonForVisit || visit.concern || '';
+}
+
+function getVisitStatus(visit: VisitRecord) {
+  return String(visit.status || '').trim().toLowerCase();
+}
+
+function isPendingVisit(visit: VisitRecord) {
+  return getVisitStatus(visit) === 'pending';
+}
+
+function isResolvedVisit(visit: VisitRecord) {
+  const status = getVisitStatus(visit);
+  return status === 'confirmed' || status === 'completed';
 }
 
 function findStaffByVisit(visit: VisitRecord, staffList: StaffRecord[]) {
@@ -454,8 +483,12 @@ function isToday(value?: string) {
   }
 
   const date = new Date(value);
+  if (!isValidDate(date)) {
+    return false;
+  }
+
   const now = new Date();
-  return date.toDateString() === now.toDateString();
+  return isSameLocalDate(date, now);
 }
 
 function isWithinLastDays(value: string | undefined, days: number) {
@@ -464,9 +497,33 @@ function isWithinLastDays(value: string | undefined, days: number) {
   }
 
   const date = new Date(value).getTime();
+  if (!Number.isFinite(date)) {
+    return false;
+  }
+
   const now = Date.now();
   const range = days * 24 * 60 * 60 * 1000;
   return date <= now && now - date <= range;
+}
+
+function isSameLocalDate(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function isValidDate(date: Date) {
+  return Number.isFinite(date.getTime());
+}
+
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message?: unknown }).message || 'Unknown error');
+  }
+
+  return 'Unknown error';
 }
 
 function getInitials(name: string) {
@@ -587,6 +644,10 @@ function buildReceiptHtml(visit: VisitRecord, staff?: StaffRecord) {
         <div class="sig-label">Nurse signature</div>
       </div>
       <div style="width:180px;text-align:center;color:#475467">Date: ${createdAt}</div>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:18px;justify-content:center">
+      <button onclick="prepareAndPrint()" style="background:#1d6332;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">PRINT RECEIPT</button>
+      <button onclick="window.close()" style="background:#e6eef0;color:#234f3a;border:none;padding:10px 18px;border-radius:8px;cursor:pointer">BACK TO DASHBOARD</button>
     </div>
 
     <script>
