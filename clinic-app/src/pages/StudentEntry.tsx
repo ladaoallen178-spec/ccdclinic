@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -39,25 +39,37 @@ function StudentEntry() {
   const [searchTerm, setSearchTerm] = useState('');
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
 
+  const refreshStudentRecords = useCallback(async () => {
+    const [nextStudents, nextVisits] = await Promise.all([loadStudents(), loadVisits()]);
+    setStudents(nextStudents);
+    setVisits(nextVisits);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-    Promise.all([loadStudents(), loadVisits()])
-      .then(([nextStudents, nextVisits]) => {
-        if (!isMounted) return;
-        setStudents(nextStudents);
-        setVisits(nextVisits);
-      })
-      .catch(() => toast.error('Unable to load student records from the database.'));
+    const refreshIfMounted = () => {
+      refreshStudentRecords().catch(() => {
+        if (isMounted) {
+          toast.error('Unable to load student records from the database.');
+        }
+      });
+    };
+
+    refreshIfMounted();
+    window.addEventListener('clinic-data-changed', refreshIfMounted);
+    window.addEventListener('storage', refreshIfMounted);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('clinic-data-changed', refreshIfMounted);
+      window.removeEventListener('storage', refreshIfMounted);
     };
-  }, []);
+  }, [refreshStudentRecords]);
 
   const studentVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'student'), [visits]);
   const pendingStudentVisits = useMemo(() => studentVisits.filter(isPendingVisit), [studentVisits]);
-  const todaysVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isToday(visit.createdAt)), [studentVisits]);
-  const recentVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(visit.createdAt, 7)), [studentVisits]);
+  const todaysVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isToday(getVisitActivityDate(visit))), [studentVisits]);
+  const recentVisits = useMemo(() => studentVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(getVisitActivityDate(visit), 7)), [studentVisits]);
   const visibleStudents = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -111,6 +123,7 @@ function StudentEntry() {
   };
 
   const confirmStudentVisit = async (visit: VisitRecord) => {
+    console.debug('[StudentEntry] confirm button click', { visitId: visit.id, visit });
     if (!isValidVisitId(visit.id)) {
       toast.error('This visit cannot be confirmed because it is not backed by a valid database record. Reload the page and try again.');
       return;
@@ -123,7 +136,10 @@ function StudentEntry() {
       const hasOtherPendingVisit = visits.some(
         (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
       );
-      setVisits((current) => current.map((item) => (item.id === savedVisit.id ? savedVisit : item)));
+      setVisits((current) => upsertVisit(current, savedVisit));
+      loadVisits()
+        .then(setVisits)
+        .catch((error) => console.warn('[StudentEntry] Visit confirmed, but refresh failed', error));
       setActiveTab('today');
       toast.success('Student visit confirmed');
       if (matchingStudent && !hasOtherPendingVisit) {
@@ -173,10 +189,11 @@ function StudentEntry() {
 
   const renderVisitRow = (visit: VisitRecord, includeDate: boolean) => {
     const student = findStudentByVisit(visit, students);
-    const createdAt = visit.createdAt ? new Date(visit.createdAt) : null;
+    const activityDate = getVisitActivityDate(visit);
+    const createdAt = activityDate ? new Date(activityDate) : null;
 
     return (
-      <tr key={`${visit.createdAt ?? 'visit'}-${visit.idNumber}-${getVisitReason(visit)}`}>
+      <tr key={`${activityDate ?? 'visit'}-${visit.idNumber}-${getVisitReason(visit)}`}>
         {includeDate ? <td>{createdAt ? formatDateTime(createdAt) : '-'}</td> : <td>{createdAt ? formatTime(createdAt) : '-'}</td>}
         <td>{visit.idNumber || student?.id || '-'}</td>
         <td>{visit.patientName || student?.name || visit.name || 'Unknown Student'}</td>
@@ -480,6 +497,10 @@ function findStudentByVisit(visit: VisitRecord, students: StudentRecord[]) {
   return students.find((student) => student.id === visit.idNumber);
 }
 
+function getVisitActivityDate(visit: VisitRecord) {
+  return visit.visitDate || visit.createdAt;
+}
+
 function isToday(value?: string) {
   if (!value) {
     return false;
@@ -527,6 +548,12 @@ function getErrorMessage(error: unknown) {
   }
 
   return 'Unknown error';
+}
+
+function upsertVisit(visits: VisitRecord[], visit: VisitRecord) {
+  return visits.some((item) => item.id === visit.id)
+    ? visits.map((item) => (item.id === visit.id ? visit : item))
+    : [visit, ...visits];
 }
 
 function getInitials(name: string) {

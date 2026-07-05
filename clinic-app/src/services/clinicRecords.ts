@@ -69,7 +69,9 @@ const INVENTORY_LOG_KEY = 'clinic-inventory-log';
 export async function loadStudents() {
   try {
     const response = await api.get('/api/students');
-    return ((response.data || []) as any[]).map(transformApiStudent);
+    const students = ((response.data || []) as any[]).map(transformApiStudent);
+    cacheRecords('clinic-students', students);
+    return students;
   } catch (error) {
     console.warn('[loadStudents] API error, falling back to localStorage:', error);
     return getStudents();
@@ -102,7 +104,9 @@ export async function deleteStudentRecord(id: string) {
 export async function loadStaff() {
   try {
     const response = await api.get('/api/staff');
-    return ((response.data || []) as any[]).map(transformApiStaff);
+    const staff = ((response.data || []) as any[]).map(transformApiStaff);
+    cacheRecords('clinic-staff', staff);
+    return staff;
   } catch (error) {
     console.warn('[loadStaff] API error, falling back to localStorage:', error);
     return getStaff();
@@ -136,7 +140,9 @@ export async function loadVisits() {
   try {
     const response = await api.get('/api/visits');
     const visits = ((response.data || []) as any[]).map(transformApiVisit);
-    return sortNewest(visits);
+    const sortedVisits = sortNewest(visits);
+    cacheRecords('clinic-visits', sortedVisits);
+    return sortedVisits;
   } catch (error) {
     console.warn('[loadVisits] API error, falling back to localStorage:', error);
     return sortNewest(getVisits());
@@ -172,10 +178,15 @@ export async function createVisitRecord(record: VisitRecord) {
 
 export async function confirmVisitRecord(id: string) {
   try {
-    console.debug('[confirmVisitRecord] calling', `/api/visits/${id}/confirm`);
-    const response = await api.post(`/api/visits/${id}/confirm`, {});
+    console.debug('[confirmVisitRecord] API request', { id, endpoint: `/api/visits/${id}/confirm` });
+    const response = await api.patch(`/api/visits/${id}/confirm`, {});
     const visit = transformApiVisit(response.data);
-    console.debug('[confirmVisitRecord] response', visit);
+    console.debug('[confirmVisitRecord] returned response', { statusCode: response.status, visit });
+
+    if (visit.status !== 'Confirmed') {
+      throw new Error(`Confirm endpoint returned status "${visit.status || 'unknown'}" instead of "Confirmed".`);
+    }
+
     saveVisits(upsertVisit(getVisits(), visit));
     return visit;
   } catch (error) {
@@ -328,7 +339,7 @@ function transformApiVisit(apiVisit: any): VisitRecord {
     patientType: apiVisit.patient_type || apiVisit.patientType || '',
     idNumber: apiVisit.student_id || apiVisit.staff_id || apiVisit.idNumber || '',
     patientName: apiVisit.patient_name || apiVisit.patientName || '',
-    temperature: apiVisit.temperature || apiVisit.blood_pressure || apiVisit.bloodPressure || '',
+    temperature: apiVisit.temperature || '',
     bloodPressure: apiVisit.blood_pressure || apiVisit.bloodPressure || '',
     referredToHospital: apiVisit.referred_to_hospital ?? apiVisit.referredToHospital ?? false,
     reasonForVisit: apiVisit.reason_for_visit || apiVisit.reasonForVisit || '',
@@ -472,10 +483,16 @@ function upsertVisit(records: VisitRecord[], record: VisitRecord) {
 
 function sortNewest<T extends { createdAt?: string }>(records: T[]) {
   return [...records].sort((left, right) => {
-    const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
-    const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
+    const leftTime = getRecordTime(left);
+    const rightTime = getRecordTime(right);
     return rightTime - leftTime;
   });
+}
+
+function getRecordTime(record: { createdAt?: string; visitDate?: string }) {
+  const value = record.visitDate || record.createdAt;
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
 }
 
 function readStorage<T>(key: string, fallback: T): T {
@@ -484,6 +501,13 @@ function readStorage<T>(key: string, fallback: T): T {
     return value ? (JSON.parse(value) as T) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+function cacheRecords<T>(key: string, records: T) {
+  const nextValue = JSON.stringify(records);
+  if (localStorage.getItem(key) !== nextValue) {
+    localStorage.setItem(key, nextValue);
   }
 }
 

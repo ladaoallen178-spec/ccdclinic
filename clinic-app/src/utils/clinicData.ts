@@ -370,16 +370,54 @@ export function getClinicStats() {
   const staff = getStaff();
   const visits = getVisits();
   const inventory = getInventory();
+  const pendingStudentVisits = visits.filter((visit) => isPatientType(visit, 'student') && isVisitStatus(visit, 'pending'));
+  const pendingStaffVisits = visits.filter((visit) => isPatientType(visit, 'staff') && isVisitStatus(visit, 'pending'));
+  const resolvedVisitsToday = visits.filter((visit) => isResolvedVisit(visit) && isToday(getVisitDateValue(visit)));
+  const referredVisitsToday = visits.filter((visit) => visit.referredToHospital && isToday(getVisitDateValue(visit)));
 
   return {
     students: students.length,
     staff: staff.length,
-    visitsToday: visits.filter((visit) => visit.status === 'Pending').length,
-    referredToday: visits.filter((visit) => visit.status === 'Referred').length,
-    studentPending: students.filter((student) => student.status === 'Pending').length,
-    staffPending: staff.filter((staffMember) => staffMember.status === 'Pending').length,
+    visitsToday: resolvedVisitsToday.length,
+    referredToday: referredVisitsToday.length,
+    studentPending: pendingStudentVisits.length,
+    staffPending: pendingStaffVisits.length,
     lowStock: inventory.filter((item) => item.stock <= 3).length,
   };
+}
+
+function isPatientType(visit: VisitRecord, type: string) {
+  return String(visit.patientType || visit.category || '').trim().toLowerCase() === type;
+}
+
+function isVisitStatus(visit: VisitRecord, status: string) {
+  return String(visit.status || '').trim().toLowerCase() === status;
+}
+
+function isResolvedVisit(visit: VisitRecord) {
+  return isVisitStatus(visit, 'confirmed') || isVisitStatus(visit, 'completed');
+}
+
+function getVisitDateValue(visit: VisitRecord) {
+  return visit.visitDate || visit.createdAt;
+}
+
+function isToday(value?: string) {
+  if (!value) {
+    return false;
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }
 
 function readStorage<T>(key: string, fallback: T): T {
