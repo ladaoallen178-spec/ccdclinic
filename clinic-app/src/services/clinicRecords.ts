@@ -150,11 +150,13 @@ export async function loadVisits() {
 }
 
 export async function createVisitRecord(record: VisitRecord) {
+  const normalizedPatientType = String(record.patientType || '').trim().toLowerCase() === 'staff' ? 'Staff' : 'Student';
+
   // Transform frontend format to backend format
   const apiPayload = {
-    patient_type: record.patientType,
-    student_id: record.idNumber && record.patientType === 'Student' ? record.idNumber : undefined,
-    staff_id: record.idNumber && record.patientType === 'Staff' ? record.idNumber : undefined,
+    patient_type: normalizedPatientType,
+    student_id: normalizedPatientType === 'Student' ? record.idNumber : undefined,
+    staff_id: normalizedPatientType === 'Staff' ? record.idNumber : undefined,
     patient_name: record.patientName || undefined,
     temperature: record.temperature,
     blood_pressure: record.bloodPressure,
@@ -179,7 +181,7 @@ export async function createVisitRecord(record: VisitRecord) {
 export async function confirmVisitRecord(id: string) {
   try {
     console.debug('[confirmVisitRecord] API request', { id, endpoint: `/api/visits/${id}/confirm` });
-    const response = await api.patch(`/api/visits/${id}/confirm`, {});
+    const response = await api.post(`/api/visits/${id}/confirm`, {});
     const visit = transformApiVisit(response.data);
     console.debug('[confirmVisitRecord] returned response', { statusCode: response.status, visit });
 
