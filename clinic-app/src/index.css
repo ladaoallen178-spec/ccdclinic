@@ -78,14 +78,13 @@ label {
   left: 0;
   display: flex;
   flex-direction: column;
-  width: 320px;
+  width: 70px;
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
   color: var(--sidebar-text);
   background: linear-gradient(180deg, #0c4f26 0%, #0a3d1f 100%);
   box-shadow: 18px 0 34px rgba(2, 25, 13, 0.18);
-  transform: translateX(calc(-100% + 20px));
-  transition: transform 0.28s ease, box-shadow 0.28s ease;
+  transition: width 0.28s ease, box-shadow 0.28s ease;
   z-index: 90;
 }
 
@@ -93,23 +92,49 @@ label {
   content: "";
   position: absolute;
   top: 0;
-  right: 0;
-  width: 20px;
+  right: -4px;
+  width: 8px;
   height: 100%;
   background: linear-gradient(180deg, rgba(255, 197, 25, 0.95), rgba(29, 125, 68, 0.9));
-  box-shadow: 6px 0 18px rgba(2, 25, 13, 0.18);
+  box-shadow: 4px 0 12px rgba(2, 25, 13, 0.18);
   pointer-events: none;
 }
 
 .sidebar:hover,
 .sidebar:focus-within {
-  transform: translateX(0);
+  width: 320px;
+  overflow-y: auto;
   box-shadow: 24px 0 44px rgba(2, 25, 13, 0.24);
 }
 
 .sidebar:hover::after,
 .sidebar:focus-within::after {
   opacity: 0;
+}
+
+.sidebar:not(:hover) .brand strong,
+.sidebar:not(:hover) .brand span,
+.sidebar:not(:hover) .sidebar-toggle-btn {
+  opacity: 0;
+}
+
+.sidebar:not(:hover) .brand {
+  padding: 16px 0 12px;
+  justify-items: center;
+}
+
+.sidebar:not(:hover) .nav-link,
+.sidebar:not(:hover) .logout-link {
+  grid-template-columns: 24px;
+  justify-content: center;
+  padding: 0;
+  gap: 0;
+}
+
+.sidebar:not(:hover) .nav-link span,
+.sidebar:not(:hover) .logout-link span,
+.sidebar:not(:hover) .nav-link em {
+  display: none;
 }
 
 .brand {
