@@ -288,16 +288,43 @@ export async function createInventoryLog(record: InventoryLog) {
 }
 
 export async function loadBmiRecords() {
-  return sortNewest(getBmiRecords());
+  try {
+    const response = await api.get('/api/bmi');
+    const records = ((response.data || []) as any[]).map(transformApiBmiRecord);
+    cacheRecords('clinic-bmi-records', records);
+    return sortNewest(records);
+  } catch (error) {
+    console.warn('[loadBmiRecords] API error, falling back to localStorage:', error);
+    return sortNewest(getBmiRecords());
+  }
 }
 
 export async function createBmiRecord(record: BmiRecord) {
-  const bmiRecord = {
-    ...record,
-    createdAt: record.createdAt || new Date().toISOString(),
+  const payload = {
+    id: record.id,
+    student_id: record.studentId,
+    student_name: record.studentName,
+    height: record.height,
+    weight: record.weight,
+    bmi: record.bmi,
+    status: record.status,
   };
-  saveBmiRecords([bmiRecord, ...getBmiRecords()]);
-  return bmiRecord;
+
+  try {
+    const response = await api.post('/api/bmi', payload);
+    const saved = transformApiBmiRecord(response.data);
+    const nextRecords = [saved, ...getBmiRecords()];
+    saveBmiRecords(nextRecords);
+    return saved;
+  } catch (error) {
+    console.warn('[createBmiRecord] API error, falling back to localStorage:', error);
+    const bmiRecord = {
+      ...record,
+      createdAt: record.createdAt || new Date().toISOString(),
+    };
+    saveBmiRecords([bmiRecord, ...getBmiRecords()]);
+    return bmiRecord;
+  }
 }
 
 export async function loadMedicalDocuments() {
@@ -350,6 +377,19 @@ function transformApiVisit(apiVisit: any): VisitRecord {
     visitDate: apiVisit.visit_date || apiVisit.visitDate || undefined,
     confirmedAt: apiVisit.confirmed_at || apiVisit.confirmedAt || undefined,
     createdAt: apiVisit.created_at || apiVisit.createdAt || new Date().toISOString(),
+  };
+}
+
+function transformApiBmiRecord(apiRecord: any): BmiRecord {
+  return {
+    id: apiRecord.id || '',
+    studentId: apiRecord.student_id || apiRecord.studentId || '',
+    studentName: apiRecord.student_name || apiRecord.studentName || '',
+    height: Number(apiRecord.height) || 0,
+    weight: Number(apiRecord.weight) || 0,
+    bmi: Number(apiRecord.bmi) || 0,
+    status: apiRecord.status || '',
+    createdAt: apiRecord.created_at || apiRecord.createdAt || new Date().toISOString(),
   };
 }
 
