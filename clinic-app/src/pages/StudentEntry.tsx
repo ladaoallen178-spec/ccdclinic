@@ -383,16 +383,10 @@ function StudentEntry() {
                   <option value="" disabled>
                     Select Year Level
                   </option>
-                  <option>1st Year</option>
-                  <option>2nd Year</option>
-                  <option>3rd Year</option>
-                  <option>4th Year</option>
-                  <option>Grade 7</option>
-                  <option>Grade 8</option>
-                  <option>Grade 9</option>
-                  <option>Grade 10</option>
-                  <option>Grade 11</option>
-                  <option>Grade 12</option>
+                  <option>First Year</option>
+                  <option>Second Year</option>
+                  <option>Third Year</option>
+                  <option>Fourth Year</option>
                 </select>
               </label>
               <label>
@@ -401,13 +395,9 @@ function StudentEntry() {
                   <option value="" disabled>
                     Select Program
                   </option>
-                  <option>CP</option>
-                  <option>STEM</option>
-                  <option>HUMSS</option>
-                  <option>ENTREP</option>
-                  <option>Computer Programming</option>
-                  <option>A</option>
-                  <option>B</option>
+                  <option>BACHELOR OF SCIENCE IN ENTREPRENEURSHIP</option>
+                  <option>BTVTED</option>
+                  <option>BACHELOR OF EARLY CHILDHOOD EDUCATION</option>
                 </select>
               </label>
             </div>

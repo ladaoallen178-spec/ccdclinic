@@ -41,8 +41,12 @@ export default function MasterList() {
       .catch(() => undefined);
   }, []);
 
-  const YEAR_LEVEL_OPTIONS = ['1st year', '2nd year', '3rd year', '4th year'];
-  const PROGRAM_OPTIONS = ['ECE', 'BTVTED-CP', 'BTVTED-HVACT', 'ENTREP'];
+  const YEAR_LEVEL_OPTIONS = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+  const PROGRAM_OPTIONS = [
+    'BACHELOR OF SCIENCE IN ENTREPRENEURSHIP',
+    'BTVTED',
+    'BACHELOR OF EARLY CHILDHOOD EDUCATION',
+  ];
 
   const availableYearLevels = YEAR_LEVEL_OPTIONS;
   const availablePrograms = PROGRAM_OPTIONS;
