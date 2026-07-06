@@ -73,8 +73,14 @@ export async function loadStudents() {
     cacheRecords('clinic-students', students);
     return students;
   } catch (error) {
-    console.warn('[loadStudents] API error, falling back to localStorage:', error);
-    return getStudents();
+    console.error('[loadStudents] API error:', error);
+
+    if (import.meta.env.DEV) {
+      console.warn('[loadStudents] Falling back to localStorage only in development.');
+      return getStudents();
+    }
+
+    throw error;
   }
 }
 
