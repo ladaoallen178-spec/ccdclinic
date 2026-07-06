@@ -69,10 +69,18 @@ const INVENTORY_LOG_KEY = 'clinic-inventory-log';
 export async function loadStudents() {
   try {
     const response = await api.get('/api/students');
-    return ((response.data || []) as any[]).map(transformApiStudent);
+    const students = ((response.data || []) as any[]).map(transformApiStudent);
+    cacheRecords('clinic-students', students);
+    return students;
   } catch (error) {
-    console.warn('[loadStudents] API error, falling back to localStorage:', error);
-    return getStudents();
+    console.error('[loadStudents] API error:', error);
+
+    if (import.meta.env.DEV) {
+      console.warn('[loadStudents] Falling back to localStorage only in development.');
+      return getStudents();
+    }
+
+    throw error;
   }
 }
 
@@ -84,7 +92,10 @@ export async function saveStudentRecord(record: StudentRecord) {
     return student;
   } catch (error) {
     console.error('[saveStudentRecord] API error:', error);
-    throw error;
+    const fallbackStudent = { ...record, createdAt: record.createdAt || new Date().toISOString() };
+    saveStudents(upsertById(getStudents(), fallbackStudent));
+    console.warn('[saveStudentRecord] Saved student record to localStorage fallback.');
+    return fallbackStudent;
   }
 }
 
@@ -102,7 +113,9 @@ export async function deleteStudentRecord(id: string) {
 export async function loadStaff() {
   try {
     const response = await api.get('/api/staff');
-    return ((response.data || []) as any[]).map(transformApiStaff);
+    const staff = ((response.data || []) as any[]).map(transformApiStaff);
+    cacheRecords('clinic-staff', staff);
+    return staff;
   } catch (error) {
     console.warn('[loadStaff] API error, falling back to localStorage:', error);
     return getStaff();
@@ -136,7 +149,9 @@ export async function loadVisits() {
   try {
     const response = await api.get('/api/visits');
     const visits = ((response.data || []) as any[]).map(transformApiVisit);
-    return sortNewest(visits);
+    const sortedVisits = sortNewest(visits);
+    cacheRecords('clinic-visits', sortedVisits);
+    return sortedVisits;
   } catch (error) {
     console.warn('[loadVisits] API error, falling back to localStorage:', error);
     return sortNewest(getVisits());
@@ -144,11 +159,13 @@ export async function loadVisits() {
 }
 
 export async function createVisitRecord(record: VisitRecord) {
+  const normalizedPatientType = String(record.patientType || '').trim().toLowerCase() === 'staff' ? 'Staff' : 'Student';
+
   // Transform frontend format to backend format
   const apiPayload = {
-    patient_type: record.patientType,
-    student_id: record.idNumber && record.patientType === 'Student' ? record.idNumber : undefined,
-    staff_id: record.idNumber && record.patientType === 'Staff' ? record.idNumber : undefined,
+    patient_type: normalizedPatientType,
+    student_id: normalizedPatientType === 'Student' ? record.idNumber : undefined,
+    staff_id: normalizedPatientType === 'Staff' ? record.idNumber : undefined,
     patient_name: record.patientName || undefined,
     temperature: record.temperature,
     blood_pressure: record.bloodPressure,
@@ -172,10 +189,15 @@ export async function createVisitRecord(record: VisitRecord) {
 
 export async function confirmVisitRecord(id: string) {
   try {
-    console.debug('[confirmVisitRecord] calling', `/api/visits/${id}/confirm`);
+    console.debug('[confirmVisitRecord] API request', { id, endpoint: `/api/visits/${id}/confirm` });
     const response = await api.post(`/api/visits/${id}/confirm`, {});
     const visit = transformApiVisit(response.data);
-    console.debug('[confirmVisitRecord] response', visit);
+    console.debug('[confirmVisitRecord] returned response', { statusCode: response.status, visit });
+
+    if (visit.status !== 'Confirmed') {
+      throw new Error(`Confirm endpoint returned status "${visit.status || 'unknown'}" instead of "Confirmed".`);
+    }
+
     saveVisits(upsertVisit(getVisits(), visit));
     return visit;
   } catch (error) {
@@ -275,16 +297,38 @@ export async function createInventoryLog(record: InventoryLog) {
 }
 
 export async function loadBmiRecords() {
-  return sortNewest(getBmiRecords());
+  try {
+    const response = await api.get('/api/bmi');
+    const records = ((response.data || []) as any[]).map(transformApiBmiRecord);
+    cacheRecords('clinic-bmi-records', records);
+    return sortNewest(records);
+  } catch (error) {
+    console.warn('[loadBmiRecords] API error, falling back to localStorage:', error);
+    return sortNewest(getBmiRecords());
+  }
 }
 
 export async function createBmiRecord(record: BmiRecord) {
-  const bmiRecord = {
-    ...record,
-    createdAt: record.createdAt || new Date().toISOString(),
+  const payload = {
+    id: record.id,
+    student_id: record.studentId,
+    student_name: record.studentName,
+    height: record.height,
+    weight: record.weight,
+    bmi: record.bmi,
+    status: record.status,
   };
-  saveBmiRecords([bmiRecord, ...getBmiRecords()]);
-  return bmiRecord;
+
+  try {
+    const response = await api.post('/api/bmi', payload);
+    const saved = transformApiBmiRecord(response.data);
+    const nextRecords = [saved, ...getBmiRecords()];
+    saveBmiRecords(nextRecords);
+    return saved;
+  } catch (error) {
+    console.error('[createBmiRecord] API error during BMI save:', error);
+    throw error;
+  }
 }
 
 export async function loadMedicalDocuments() {
@@ -328,7 +372,7 @@ function transformApiVisit(apiVisit: any): VisitRecord {
     patientType: apiVisit.patient_type || apiVisit.patientType || '',
     idNumber: apiVisit.student_id || apiVisit.staff_id || apiVisit.idNumber || '',
     patientName: apiVisit.patient_name || apiVisit.patientName || '',
-    temperature: apiVisit.temperature || apiVisit.blood_pressure || apiVisit.bloodPressure || '',
+    temperature: apiVisit.temperature || '',
     bloodPressure: apiVisit.blood_pressure || apiVisit.bloodPressure || '',
     referredToHospital: apiVisit.referred_to_hospital ?? apiVisit.referredToHospital ?? false,
     reasonForVisit: apiVisit.reason_for_visit || apiVisit.reasonForVisit || '',
@@ -337,6 +381,19 @@ function transformApiVisit(apiVisit: any): VisitRecord {
     visitDate: apiVisit.visit_date || apiVisit.visitDate || undefined,
     confirmedAt: apiVisit.confirmed_at || apiVisit.confirmedAt || undefined,
     createdAt: apiVisit.created_at || apiVisit.createdAt || new Date().toISOString(),
+  };
+}
+
+function transformApiBmiRecord(apiRecord: any): BmiRecord {
+  return {
+    id: apiRecord.id || '',
+    studentId: apiRecord.student_id || apiRecord.studentId || '',
+    studentName: apiRecord.student_name || apiRecord.studentName || '',
+    height: Number(apiRecord.height) || 0,
+    weight: Number(apiRecord.weight) || 0,
+    bmi: Number(apiRecord.bmi) || 0,
+    status: apiRecord.status || '',
+    createdAt: apiRecord.created_at || apiRecord.createdAt || new Date().toISOString(),
   };
 }
 
@@ -472,10 +529,16 @@ function upsertVisit(records: VisitRecord[], record: VisitRecord) {
 
 function sortNewest<T extends { createdAt?: string }>(records: T[]) {
   return [...records].sort((left, right) => {
-    const leftTime = left.createdAt ? new Date(left.createdAt).getTime() : 0;
-    const rightTime = right.createdAt ? new Date(right.createdAt).getTime() : 0;
+    const leftTime = getRecordTime(left);
+    const rightTime = getRecordTime(right);
     return rightTime - leftTime;
   });
+}
+
+function getRecordTime(record: { createdAt?: string; visitDate?: string }) {
+  const value = record.visitDate || record.createdAt;
+  const time = value ? new Date(value).getTime() : 0;
+  return Number.isFinite(time) ? time : 0;
 }
 
 function readStorage<T>(key: string, fallback: T): T {
@@ -484,6 +547,13 @@ function readStorage<T>(key: string, fallback: T): T {
     return value ? (JSON.parse(value) as T) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+function cacheRecords<T>(key: string, records: T) {
+  const nextValue = JSON.stringify(records);
+  if (localStorage.getItem(key) !== nextValue) {
+    localStorage.setItem(key, nextValue);
   }
 }
 

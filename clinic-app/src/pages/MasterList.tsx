@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStudents, getVisits } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
-import { loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
+import { loadStudents, loadVisits, saveStudentRecord, saveStudents } from '../services/clinicRecords';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -31,6 +31,10 @@ export default function MasterList() {
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [editedStudent, setEditedStudent] = useState<Partial<StudentRecord>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([loadStudents(), loadVisits()])
@@ -41,8 +45,12 @@ export default function MasterList() {
       .catch(() => undefined);
   }, []);
 
-  const YEAR_LEVEL_OPTIONS = ['1st year', '2nd year', '3rd year', '4th year'];
-  const PROGRAM_OPTIONS = ['ECE', 'BTVTED-CP', 'BTVTED-HVACT', 'ENTREP'];
+  const YEAR_LEVEL_OPTIONS = ['First Year', 'Second Year', 'Third Year', 'Fourth Year'];
+  const PROGRAM_OPTIONS = [
+    'BACHELOR OF SCIENCE IN ENTREPRENEURSHIP',
+    'BTVTED',
+    'BACHELOR OF EARLY CHILDHOOD EDUCATION',
+  ];
 
   const availableYearLevels = YEAR_LEVEL_OPTIONS;
   const availablePrograms = PROGRAM_OPTIONS;
@@ -155,8 +163,9 @@ export default function MasterList() {
 
   const isEditing = (student: StudentRecord) => editingStudentId === student.id;
 
-  const renderEditRow = (student: StudentRecord) => (
+  const renderEditRow = (student: StudentRecord, idx: number) => (
     <tr key={`edit-${student.id}`} className="editing-row">
+      <td>{idx + 1}</td>
       <td>{student.id}</td>
       <td>
         <input value={getFieldValue('name', student)} onChange={handleEditFieldChange('name')} />
@@ -191,8 +200,9 @@ export default function MasterList() {
     </tr>
   );
 
-  const renderStudentRow = (student: StudentRecord) => (
+  const renderStudentRow = (student: StudentRecord, idx: number) => (
     <tr key={student.id}>
+      <td>{idx + 1}</td>
       <td>{student.id}</td>
       <td>{student.name}</td>
       <td>{student.yearLevel || '-'}</td>
@@ -217,15 +227,15 @@ export default function MasterList() {
     if (!filteredStudents.length) {
       return (
         <tr>
-          <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0' }}>
+          <td colSpan={11} style={{ textAlign: 'center', padding: '24px 0' }}>
             No students found for the selected filters.
           </td>
         </tr>
       );
     }
 
-    return filteredStudents.flatMap((student) =>
-      isEditing(student) ? [renderEditRow(student)] : [renderStudentRow(student)],
+    return filteredStudents.flatMap((student, idx) =>
+      isEditing(student) ? [renderEditRow(student, idx)] : [renderStudentRow(student, idx)],
     );
   };
 
@@ -236,8 +246,9 @@ export default function MasterList() {
   };
 
   const exportCsv = () => {
-    const headers = ['Student ID', 'Full Name', 'Year Level', 'Program', 'Age', 'Gender', 'Parent Name', 'Parent Phone', 'Date Registered'];
-    const rows = filteredStudents.map((student) => [
+    const headers = ['No.', 'Student ID', 'Full Name', 'Year Level', 'Program', 'Age', 'Gender', 'Parent Name', 'Parent Phone', 'Date Registered'];
+    const rows = filteredStudents.map((student, idx) => [
+      String(idx + 1),
       student.id,
       student.name,
       student.yearLevel || '-',
@@ -379,8 +390,9 @@ export default function MasterList() {
     const header = `<h1 style="font-family: Arial, sans-serif;">CCD Students Master List</h1><p style="font-family: Arial, sans-serif;">${formatDate(new Date().toISOString())}</p>`;
     const tableRows = filteredStudents
       .map(
-        (student) => `
+        (student, idx) => `
           <tr>
+            <td>${idx + 1}</td>
             <td>${student.id}</td>
             <td>${student.name}</td>
             <td>${student.yearLevel || '-'}</td>
@@ -404,7 +416,7 @@ export default function MasterList() {
             th { background: #1d6332; color: #fff; }
           </style>
         </head>
-        <body>${header}<table><thead><tr><th>Student ID</th><th>Full Name</th><th>Year Level</th><th>Program</th><th>Age</th><th>Gender</th><th>Parent Name</th><th>Parent Phone</th><th>Date Registered</th></tr></thead><tbody>${tableRows}</tbody></table></body>
+        <body>${header}<table><thead><tr><th>No.</th><th>Student ID</th><th>Full Name</th><th>Year Level</th><th>Program</th><th>Age</th><th>Gender</th><th>Parent Name</th><th>Parent Phone</th><th>Date Registered</th></tr></thead><tbody>${tableRows}</tbody></table></body>
       </html>
     `;
     const printWindow = window.open('', '_blank', 'width=1200,height=900');
@@ -495,20 +507,44 @@ export default function MasterList() {
           <button type="button" onClick={printTable}>
             <Printer size={16} /> Print
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={16} /> Upload Excel
+          <button type="button" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            <Upload size={16} /> {isUploading ? 'Uploading...' : 'Upload Excel'}
           </button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleStudentFileUpload} style={{ display: 'none' }} />
           <button type="button" onClick={exportCsv}>
             <Download size={16} /> Export CSV
           </button>
         </div>
+        {isUploading ? (
+          <div className="upload-progress" style={{ marginTop: 10 }}>
+            <div style={{ marginBottom: 6, fontSize: '0.95rem', color: '#1f4d2f' }}>
+              Uploading {uploadProgress} / {uploadTotal} students...
+            </div>
+            <div style={{ width: '100%', background: '#d9ebda', borderRadius: 999, height: 14, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: uploadTotal > 0 ? `${Math.round((uploadProgress / uploadTotal) * 100)}%` : '0%',
+                  minWidth: '8px',
+                  height: '100%',
+                  background: '#1d6332',
+                  transition: 'width 0.2s ease',
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {uploadError ? (
+          <div className="upload-error" style={{ marginTop: 10, fontSize: '0.95rem', color: '#8b1e1e' }}>
+            {uploadError}
+          </div>
+        ) : null}
       </article>
 
       <article className="panel">
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>Student ID</th>
               <th>Full Name</th>
               <th>Year Level</th>

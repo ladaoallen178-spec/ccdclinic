@@ -234,18 +234,67 @@ async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
             patient_type VARCHAR(50) NOT NULL CHECK (patient_type IN ('Student', 'Staff')),
             student_id VARCHAR(50) REFERENCES students(id) ON DELETE CASCADE,
             staff_id VARCHAR(50) REFERENCES staff(id) ON DELETE CASCADE,
+            patient_name VARCHAR(255),
             temperature VARCHAR(20),
             blood_pressure VARCHAR(20),
             referred_to_hospital BOOLEAN NOT NULL DEFAULT FALSE,
             reason_for_visit TEXT NOT NULL,
             medicine_given VARCHAR(255),
             status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+            visit_date TIMESTAMPTZ DEFAULT NOW(),
+            confirmed_at TIMESTAMPTZ,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             CONSTRAINT chk_visit_patient_reference CHECK (
                 (patient_type = 'Student' AND student_id IS NOT NULL AND staff_id IS NULL) OR
                 (patient_type = 'Staff' AND staff_id IS NOT NULL AND student_id IS NULL)
             )
         )
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE visits
+        ADD COLUMN IF NOT EXISTS patient_name VARCHAR(255)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE visits
+        ADD COLUMN IF NOT EXISTS visit_date TIMESTAMPTZ
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        UPDATE visits
+        SET visit_date = created_at
+        WHERE visit_date IS NULL
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE visits
+        ALTER COLUMN visit_date SET DEFAULT NOW()
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        ALTER TABLE visits
+        ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ
         "#,
     )
     .execute(pool)
@@ -263,6 +312,14 @@ async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query(
         r#"
         CREATE INDEX IF NOT EXISTS idx_visits_status ON visits(status)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE INDEX IF NOT EXISTS idx_visits_visit_date ON visits(visit_date)
         "#,
     )
     .execute(pool)

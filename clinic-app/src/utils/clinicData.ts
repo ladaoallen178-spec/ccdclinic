@@ -98,8 +98,8 @@ const defaultStudents: StudentRecord[] = [
     status: 'Pending',
     age: '16',
     gender: 'Male',
-    yearLevel: 'Grade 10',
-    program: 'A',
+    yearLevel: 'First Year',
+    program: 'BACHELOR OF SCIENCE IN ENTREPRENEURSHIP',
     parentName: 'Jose Dela Cruz',
     parentPhone: '06123456748',
   },
@@ -111,8 +111,8 @@ const defaultStudents: StudentRecord[] = [
     status: 'Pending',
     age: '17',
     gender: 'Female',
-    yearLevel: 'Grade 11',
-    program: 'STEM',
+    yearLevel: 'Second Year',
+    program: 'BTVTED',
     parentName: 'Liza Reyes',
     parentPhone: '06123456748',
   },
@@ -124,8 +124,8 @@ const defaultStudents: StudentRecord[] = [
     status: 'Cleared',
     age: '15',
     gender: 'Male',
-    yearLevel: 'Grade 9',
-    program: 'B',
+    yearLevel: 'Third Year',
+    program: 'BACHELOR OF EARLY CHILDHOOD EDUCATION',
     parentName: 'Marites Villanueva',
     parentPhone: '06123456748',
   },
@@ -137,8 +137,8 @@ const defaultStudents: StudentRecord[] = [
     status: 'Pending',
     age: '18',
     gender: 'Female',
-    yearLevel: 'Grade 12',
-    program: 'HUMSS',
+    yearLevel: 'Fourth Year',
+    program: 'BACHELOR OF SCIENCE IN ENTREPRENEURSHIP',
     parentName: 'Ramon Cruz',
     parentPhone: '06123456748',
   },
@@ -190,6 +190,7 @@ const defaultNurses: NurseRecord[] = [];
 
 const defaultVisits: VisitRecord[] = [
   {
+    id: 'VISIT-S-1001-1',
     patientType: 'Student',
     idNumber: 'S-1001',
     temperature: '36.8',
@@ -203,6 +204,7 @@ const defaultVisits: VisitRecord[] = [
     yearProgram: 'Grade 10 - A',
   },
   {
+    id: 'VISIT-T-2001-1',
     patientType: 'Staff',
     idNumber: 'T-2001',
     temperature: '36.5',
@@ -286,12 +288,52 @@ export function saveNurses(nurses: NurseRecord[]) {
 
 export function getVisits() {
   const v = readStorage('clinic-visits', defaultVisits);
-  return Array.isArray(v) ? (v as VisitRecord[]) : defaultVisits;
+  const visits = Array.isArray(v) ? (v as VisitRecord[]) : defaultVisits;
+  const normalized = normalizeVisits(visits);
+
+  if (!visits.every((visit, index) => visit.id && visit.id === normalized[index]?.id)) {
+    saveVisits(normalized);
+  }
+
+  return normalized;
 }
 
 export function saveVisits(visits: VisitRecord[]) {
   localStorage.setItem('clinic-visits', JSON.stringify(visits));
   notifyClinicDataChanged();
+}
+
+function normalizeVisits(visits: VisitRecord[]) {
+  return visits.map(normalizeVisitRecord);
+}
+
+function normalizeVisitRecord(visit: VisitRecord) {
+  return {
+    ...visit,
+    id: visit.id || generateFallbackVisitId(visit),
+  };
+}
+
+function generateFallbackVisitId(visit: VisitRecord) {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  const base = `${visit.patientType || 'visit'}-${visit.idNumber || visit.patientName || 'unknown'}`
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 48);
+  const seed = visit.createdAt || `${visit.patientType}-${visit.idNumber}-${visit.patientName || ''}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  }
+  return `LOCAL-${base || 'VISIT'}-${Math.abs(hash).toString(36)}`;
+}
+
+export function isValidVisitId(id?: string) {
+  return typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 }
 
 export function getInventory() {
@@ -328,16 +370,54 @@ export function getClinicStats() {
   const staff = getStaff();
   const visits = getVisits();
   const inventory = getInventory();
+  const pendingStudentVisits = visits.filter((visit) => isPatientType(visit, 'student') && isVisitStatus(visit, 'pending'));
+  const pendingStaffVisits = visits.filter((visit) => isPatientType(visit, 'staff') && isVisitStatus(visit, 'pending'));
+  const resolvedVisitsToday = visits.filter((visit) => isResolvedVisit(visit) && isToday(getVisitDateValue(visit)));
+  const referredVisitsToday = visits.filter((visit) => visit.referredToHospital && isToday(getVisitDateValue(visit)));
 
   return {
     students: students.length,
     staff: staff.length,
-    visitsToday: visits.filter((visit) => visit.status === 'Pending').length,
-    referredToday: visits.filter((visit) => visit.status === 'Referred').length,
-    studentPending: students.filter((student) => student.status === 'Pending').length,
-    staffPending: staff.filter((staffMember) => staffMember.status === 'Pending').length,
+    visitsToday: resolvedVisitsToday.length,
+    referredToday: referredVisitsToday.length,
+    studentPending: pendingStudentVisits.length,
+    staffPending: pendingStaffVisits.length,
     lowStock: inventory.filter((item) => item.stock <= 3).length,
   };
+}
+
+function isPatientType(visit: VisitRecord, type: string) {
+  return String(visit.patientType || visit.category || '').trim().toLowerCase() === type;
+}
+
+function isVisitStatus(visit: VisitRecord, status: string) {
+  return String(visit.status || '').trim().toLowerCase() === status;
+}
+
+function isResolvedVisit(visit: VisitRecord) {
+  return isVisitStatus(visit, 'confirmed') || isVisitStatus(visit, 'completed');
+}
+
+function getVisitDateValue(visit: VisitRecord) {
+  return visit.visitDate || visit.createdAt;
+}
+
+function isToday(value?: string) {
+  if (!value) {
+    return false;
+  }
+
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return false;
+  }
+
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }
 
 function readStorage<T>(key: string, fallback: T): T {

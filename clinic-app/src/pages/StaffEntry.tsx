@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Briefcase,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
-import { getStaff, getVisits } from '../utils/clinicData';
+import { getStaff, getVisits, isValidVisitId } from '../utils/clinicData';
 import type { StaffRecord, VisitRecord } from '../utils/clinicData';
 import { confirmVisitRecord, deleteVisitRecord, loadStaff, loadVisits, saveStaffRecord } from '../services/clinicRecords';
 
@@ -37,29 +37,37 @@ function StaffEntry() {
   const [searchTerm, setSearchTerm] = useState('');
   const [historyStaffId, setHistoryStaffId] = useState<string | null>(null);
 
+  const refreshStaffRecords = useCallback(async () => {
+    const [nextStaff, nextVisits] = await Promise.all([loadStaff(), loadVisits()]);
+    setStaffList(nextStaff);
+    setVisits(nextVisits);
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
-    Promise.all([loadStaff(), loadVisits()])
-      .then(([nextStaff, nextVisits]) => {
-        if (!isMounted) return;
-        setStaffList(nextStaff);
-        setVisits(nextVisits);
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        // This should rarely happen now due to fallback logic
-        toast.error('Unable to load staff records. Using cached data if available.');
+    const refreshIfMounted = () => {
+      refreshStaffRecords().catch(() => {
+        if (isMounted) {
+          toast.error('Unable to load staff records. Using cached data if available.');
+        }
       });
+    };
+
+    refreshIfMounted();
+    window.addEventListener('clinic-data-changed', refreshIfMounted);
+    window.addEventListener('storage', refreshIfMounted);
 
     return () => {
       isMounted = false;
+      window.removeEventListener('clinic-data-changed', refreshIfMounted);
+      window.removeEventListener('storage', refreshIfMounted);
     };
-  }, []);
+  }, [refreshStaffRecords]);
 
   const staffVisits = useMemo(() => visits.filter((visit) => getVisitPatientType(visit) === 'staff'), [visits]);
   const pendingStaffVisits = useMemo(() => staffVisits.filter(isPendingVisit), [staffVisits]);
-  const todaysVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isToday(visit.createdAt)), [staffVisits]);
-  const recentVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(visit.createdAt, 7)), [staffVisits]);
+  const todaysVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isToday(getVisitActivityDate(visit))), [staffVisits]);
+  const recentVisits = useMemo(() => staffVisits.filter((visit) => isResolvedVisit(visit) && isWithinLastDays(getVisitActivityDate(visit), 7)), [staffVisits]);
   const visibleStaff = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -111,8 +119,9 @@ function StaffEntry() {
   };
 
   const confirmStaffVisit = async (visit: VisitRecord) => {
-    if (!visit.id) {
-      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+    console.debug('[StaffEntry] confirm button click', { visitId: visit.id, visit });
+    if (!isValidVisitId(visit.id)) {
+      toast.error('This visit cannot be confirmed because it is not backed by a valid database record. Reload the page and try again.');
       return;
     }
 
@@ -123,7 +132,10 @@ function StaffEntry() {
       const hasOtherPendingVisit = visits.some(
         (item) => item.id !== visit.id && item.idNumber === savedVisit.idNumber && isPendingVisit(item),
       );
-      setVisits((current) => current.map((item) => (item.id === savedVisit.id ? savedVisit : item)));
+      setVisits((current) => upsertVisit(current, savedVisit));
+      loadVisits()
+        .then(setVisits)
+        .catch((error) => console.warn('[StaffEntry] Visit confirmed, but refresh failed', error));
       setActiveTab('today');
       toast.success('Staff visit confirmed');
       if (matchingStaff && !hasOtherPendingVisit) {
@@ -140,8 +152,8 @@ function StaffEntry() {
   };
 
   const rejectStaffVisit = async (visit: VisitRecord) => {
-    if (!visit.id) {
-      toast.error('This pending visit is missing a database ID. Reload records from the database and try again.');
+    if (!isValidVisitId(visit.id)) {
+      toast.error('This visit cannot be removed because it is not backed by a valid database record. Reload the page and try again.');
       return;
     }
 
@@ -174,10 +186,11 @@ function StaffEntry() {
 
   const renderVisitRow = (visit: VisitRecord, includeDate: boolean) => {
     const staff = findStaffByVisit(visit, staffList);
-    const createdAt = visit.createdAt ? new Date(visit.createdAt) : null;
+    const activityDate = getVisitActivityDate(visit);
+    const createdAt = activityDate ? new Date(activityDate) : null;
 
     return (
-      <tr key={`${visit.createdAt ?? 'visit'}-${visit.idNumber}-${getVisitReason(visit)}`}>
+      <tr key={`${activityDate ?? 'visit'}-${visit.idNumber}-${getVisitReason(visit)}`}>
         {includeDate ? <td>{createdAt ? formatDateTime(createdAt) : '-'}</td> : <td>{createdAt ? formatTime(createdAt) : '-'}</td>}
         <td>{visit.idNumber || staff?.id || '-'}</td>
         <td>{visit.patientName || staff?.name || visit.name || 'Unknown Staff'}</td>
@@ -478,6 +491,10 @@ function findStaffByVisit(visit: VisitRecord, staffList: StaffRecord[]) {
   return staffList.find((staff) => staff.id === visit.idNumber);
 }
 
+function getVisitActivityDate(visit: VisitRecord) {
+  return visit.visitDate || visit.createdAt;
+}
+
 function isToday(value?: string) {
   if (!value) {
     return false;
@@ -525,6 +542,12 @@ function getErrorMessage(error: unknown) {
   }
 
   return 'Unknown error';
+}
+
+function upsertVisit(visits: VisitRecord[], visit: VisitRecord) {
+  return visits.some((item) => item.id === visit.id)
+    ? visits.map((item) => (item.id === visit.id ? visit : item))
+    : [visit, ...visits];
 }
 
 function getInitials(name: string) {

@@ -21,8 +21,8 @@ export default function MedicalDocuments() {
     const params = new URLSearchParams(location.search);
     return params.get('studentId')?.trim() ?? params.get('studentName')?.trim() ?? '';
   });
-  const [yearFilter, setYearFilter] = useState('1st Year');
-  const [programFilter, setProgramFilter] = useState('ENTREP');
+  const [yearFilter, setYearFilter] = useState('First Year');
+  const [programFilter, setProgramFilter] = useState('BACHELOR OF SCIENCE IN ENTREPRENEURSHIP');
 
   useEffect(() => {
     loadMedicalDocuments()
@@ -147,10 +147,10 @@ export default function MedicalDocuments() {
                 <option value="" disabled>
                   Select
                 </option>
-                <option>1st Year</option>
-                <option>2nd Year</option>
-                <option>3rd Year</option>
-                <option>4th Year</option>
+                <option>First Year</option>
+                <option>Second Year</option>
+                <option>Third Year</option>
+                <option>Fourth Year</option>
               </select>
             </label>
             <label>
@@ -159,9 +159,9 @@ export default function MedicalDocuments() {
                 <option value="" disabled>
                   Select
                 </option>
-                <option>ENTREP</option>
-                <option>ECE</option>
-                <option>CP</option>
+                <option>BACHELOR OF SCIENCE IN ENTREPRENEURSHIP</option>
+                <option>BTVTED</option>
+                <option>BACHELOR OF EARLY CHILDHOOD EDUCATION</option>
               </select>
             </label>
             <label>
@@ -215,14 +215,14 @@ export default function MedicalDocuments() {
           </div>
 
           <div className="medical-filter-row" aria-label="Year level filters">
-            {['1st Year', '2nd Year', '3rd Year', '4th Year'].map((year) => (
+            {['First Year', 'Second Year', 'Third Year', 'Fourth Year'].map((year) => (
               <button key={year} type="button" className={yearFilter === year ? 'active' : ''} onClick={() => setYearFilter(year)}>
                 {year}
               </button>
             ))}
           </div>
           <div className="medical-filter-row program" aria-label="Program filters">
-            {['ENTREP', 'ECE', 'CP'].map((program) => (
+            {['BACHELOR OF SCIENCE IN ENTREPRENEURSHIP', 'BTVTED', 'BACHELOR OF EARLY CHILDHOOD EDUCATION'].map((program) => (
               <button key={program} type="button" className={programFilter === program ? 'active' : ''} onClick={() => setProgramFilter(program)}>
                 {program}
               </button>
