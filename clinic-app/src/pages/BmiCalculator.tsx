@@ -145,8 +145,13 @@ export default function BmiCalculator() {
       setHeight('');
       setWeight('');
       toast.success('BMI recorded');
-    } catch {
-      toast.error('BMI record was not saved to the database.');
+    } catch (error: any) {
+      console.error('[BmiCalculator] Failed to save BMI record:', error);
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        'BMI record was not saved to the database.';
+      toast.error(message);
     }
   };
 
