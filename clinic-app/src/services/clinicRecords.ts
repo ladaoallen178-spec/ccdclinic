@@ -86,7 +86,10 @@ export async function saveStudentRecord(record: StudentRecord) {
     return student;
   } catch (error) {
     console.error('[saveStudentRecord] API error:', error);
-    throw error;
+    const fallbackStudent = { ...record, createdAt: record.createdAt || new Date().toISOString() };
+    saveStudents(upsertById(getStudents(), fallbackStudent));
+    console.warn('[saveStudentRecord] Saved student record to localStorage fallback.');
+    return fallbackStudent;
   }
 }
 

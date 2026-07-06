@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStudents, getVisits } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
-import { loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
+import { loadStudents, loadVisits, saveStudentRecord, saveStudents } from '../services/clinicRecords';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -31,6 +31,10 @@ export default function MasterList() {
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [editedStudent, setEditedStudent] = useState<Partial<StudentRecord>>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([loadStudents(), loadVisits()])
@@ -503,14 +507,24 @@ export default function MasterList() {
           <button type="button" onClick={printTable}>
             <Printer size={16} /> Print
           </button>
-          <button type="button" onClick={() => fileInputRef.current?.click()}>
-            <Upload size={16} /> Upload Excel
+          <button type="button" disabled={isUploading} onClick={() => fileInputRef.current?.click()}>
+            <Upload size={16} /> {isUploading ? 'Uploading...' : 'Upload Excel'}
           </button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleStudentFileUpload} style={{ display: 'none' }} />
           <button type="button" onClick={exportCsv}>
             <Download size={16} /> Export CSV
           </button>
         </div>
+        {isUploading ? (
+          <div className="upload-progress" style={{ marginTop: 10, fontSize: '0.95rem', color: '#1f4d2f' }}>
+            Uploading {uploadProgress} / {uploadTotal} students...
+          </div>
+        ) : null}
+        {uploadError ? (
+          <div className="upload-error" style={{ marginTop: 10, fontSize: '0.95rem', color: '#8b1e1e' }}>
+            {uploadError}
+          </div>
+        ) : null}
       </article>
 
       <article className="panel">
