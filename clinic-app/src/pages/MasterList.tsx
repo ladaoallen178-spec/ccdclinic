@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import MedicalHistoryRecord from '../components/MedicalHistoryRecord';
 import { getStudents, getVisits } from '../utils/clinicData';
 import type { StudentRecord, VisitRecord } from '../utils/clinicData';
-import { loadStudents, loadVisits, saveStudentRecord, saveStudents } from '../services/clinicRecords';
+import { loadStudents, loadVisits, saveStudentRecord } from '../services/clinicRecords';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return '-';
@@ -28,6 +28,9 @@ export default function MasterList() {
   const [yearFilter, setYearFilter] = useState('All Years');
   const [programFilter, setProgramFilter] = useState('All Programs');
   const [searchTerm, setSearchTerm] = useState('');
+  const [bulkFromYear, setBulkFromYear] = useState('');
+  const [bulkToYear, setBulkToYear] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const [historyStudentId, setHistoryStudentId] = useState<string | null>(null);
   const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
   const [editedStudent, setEditedStudent] = useState<Partial<StudentRecord>>({});
@@ -142,6 +145,50 @@ export default function MasterList() {
     } catch (error) {
       console.error('[MasterList] Update student failed', error);
       toast.error('Unable to save student details.');
+    }
+  };
+
+  const handleBulkUpdateYearLevel = async () => {
+    if (!bulkFromYear || !bulkToYear) {
+      toast.error('Select both current and target year levels.');
+      return;
+    }
+
+    if (bulkFromYear === bulkToYear) {
+      toast.error('Choose a different target year level.');
+      return;
+    }
+
+    const studentsToUpdate = students.filter((student) => student.yearLevel === bulkFromYear);
+    if (studentsToUpdate.length === 0) {
+      toast.error(`No students found in ${bulkFromYear}.`);
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const updatedStudents = await Promise.all(
+        studentsToUpdate.map(async (student) => {
+          const updatedStudent = { ...student, yearLevel: bulkToYear };
+          return saveStudentRecord(updatedStudent);
+        }),
+      );
+
+      setStudents((current) =>
+        current.map((student) => {
+          const updated = updatedStudents.find((item) => item.id === student.id);
+          return updated ?? student;
+        }),
+      );
+
+      toast.success(`${updatedStudents.length} student${updatedStudents.length === 1 ? '' : 's'} updated from ${bulkFromYear} to ${bulkToYear}.`);
+      setBulkFromYear('');
+      setBulkToYear('');
+    } catch (error) {
+      console.error('[MasterList] Bulk update year level failed', error);
+      toast.error('Unable to update year levels.');
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -342,6 +389,11 @@ export default function MasterList() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadTotal(0);
+    setUploadError(null);
+
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
       const firstSheetName = workbook.SheetNames[0];
@@ -376,12 +428,13 @@ export default function MasterList() {
         toast.success(`${savedStudents.length} student${savedStudents.length === 1 ? '' : 's'} uploaded to the system.`);
       }
       if (failedStudents.length > 0) {
-        toast.error(`${failedStudents.length} student${failedStudents.length === 1 ? '' : 's'} could not be saved to the database.`);
+        setUploadError(`${failedStudents.length} student${failedStudents.length === 1 ? '' : 's'} could not be saved to the database.`);
       }
     } catch (err) {
       console.error(err);
-      toast.error('Unable to read the Excel file.');
+      setUploadError('Unable to read the Excel file.');
     } finally {
+      setIsUploading(false);
       if (event.target) event.target.value = '';
     }
   }
@@ -489,6 +542,24 @@ export default function MasterList() {
             </select>
           </label>
 
+          <label>
+            Update Year Level
+            <div className="year-update-controls">
+              <select value={bulkFromYear} onChange={(event) => setBulkFromYear(event.target.value)}>
+                <option value="">From</option>
+                {availableYearLevels.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <select value={bulkToYear} onChange={(event) => setBulkToYear(event.target.value)}>
+                <option value="">To</option>
+                {availableYearLevels.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+          </label>
+
           <label className="search-field">
             <Search size={16} />
             <input
@@ -501,6 +572,14 @@ export default function MasterList() {
         </div>
 
         <div className="action-buttons">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={!bulkFromYear || !bulkToYear || bulkFromYear === bulkToYear || isBulkUpdating}
+            onClick={handleBulkUpdateYearLevel}
+          >
+            {isBulkUpdating ? 'Updating...' : 'Apply Year Level'}
+          </button>
           <button type="button" onClick={handleReset}>
             <RefreshCcw size={16} /> Reset
           </button>
