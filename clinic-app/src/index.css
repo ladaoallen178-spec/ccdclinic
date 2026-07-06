@@ -182,6 +182,35 @@ label {
   grid-column: 1 / -1;
 }
 
+/* Main app area that sits to the right of the fixed sidebar */
+.app-main {
+  margin-left: 70px;
+  flex: 1;
+  transition: margin-left 0.28s ease;
+  position: relative;
+}
+
+/* When the sidebar expands on hover, push the main content to the right */
+.sidebar:hover + .app-main,
+.sidebar:focus-within + .app-main {
+  margin-left: 320px;
+}
+
+/* On small screens make the sidebar flow with the page and remove left margin */
+@media (max-width: 900px) {
+  .app-main {
+    margin-left: 0;
+  }
+  .sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+  }
+  .sidebar:hover {
+    width: 100%;
+  }
+}
+
 .brand strong {
   margin-top: 10px;
   color: #ffffff;

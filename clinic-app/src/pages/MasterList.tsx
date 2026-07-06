@@ -159,8 +159,9 @@ export default function MasterList() {
 
   const isEditing = (student: StudentRecord) => editingStudentId === student.id;
 
-  const renderEditRow = (student: StudentRecord) => (
+  const renderEditRow = (student: StudentRecord, idx: number) => (
     <tr key={`edit-${student.id}`} className="editing-row">
+      <td>{idx + 1}</td>
       <td>{student.id}</td>
       <td>
         <input value={getFieldValue('name', student)} onChange={handleEditFieldChange('name')} />
@@ -195,8 +196,9 @@ export default function MasterList() {
     </tr>
   );
 
-  const renderStudentRow = (student: StudentRecord) => (
+  const renderStudentRow = (student: StudentRecord, idx: number) => (
     <tr key={student.id}>
+      <td>{idx + 1}</td>
       <td>{student.id}</td>
       <td>{student.name}</td>
       <td>{student.yearLevel || '-'}</td>
@@ -221,15 +223,15 @@ export default function MasterList() {
     if (!filteredStudents.length) {
       return (
         <tr>
-          <td colSpan={10} style={{ textAlign: 'center', padding: '24px 0' }}>
+          <td colSpan={11} style={{ textAlign: 'center', padding: '24px 0' }}>
             No students found for the selected filters.
           </td>
         </tr>
       );
     }
 
-    return filteredStudents.flatMap((student) =>
-      isEditing(student) ? [renderEditRow(student)] : [renderStudentRow(student)],
+    return filteredStudents.flatMap((student, idx) =>
+      isEditing(student) ? [renderEditRow(student, idx)] : [renderStudentRow(student, idx)],
     );
   };
 
@@ -240,8 +242,9 @@ export default function MasterList() {
   };
 
   const exportCsv = () => {
-    const headers = ['Student ID', 'Full Name', 'Year Level', 'Program', 'Age', 'Gender', 'Parent Name', 'Parent Phone', 'Date Registered'];
-    const rows = filteredStudents.map((student) => [
+    const headers = ['No.', 'Student ID', 'Full Name', 'Year Level', 'Program', 'Age', 'Gender', 'Parent Name', 'Parent Phone', 'Date Registered'];
+    const rows = filteredStudents.map((student, idx) => [
+      String(idx + 1),
       student.id,
       student.name,
       student.yearLevel || '-',
@@ -383,8 +386,9 @@ export default function MasterList() {
     const header = `<h1 style="font-family: Arial, sans-serif;">CCD Students Master List</h1><p style="font-family: Arial, sans-serif;">${formatDate(new Date().toISOString())}</p>`;
     const tableRows = filteredStudents
       .map(
-        (student) => `
+        (student, idx) => `
           <tr>
+            <td>${idx + 1}</td>
             <td>${student.id}</td>
             <td>${student.name}</td>
             <td>${student.yearLevel || '-'}</td>
@@ -408,7 +412,7 @@ export default function MasterList() {
             th { background: #1d6332; color: #fff; }
           </style>
         </head>
-        <body>${header}<table><thead><tr><th>Student ID</th><th>Full Name</th><th>Year Level</th><th>Program</th><th>Age</th><th>Gender</th><th>Parent Name</th><th>Parent Phone</th><th>Date Registered</th></tr></thead><tbody>${tableRows}</tbody></table></body>
+        <body>${header}<table><thead><tr><th>No.</th><th>Student ID</th><th>Full Name</th><th>Year Level</th><th>Program</th><th>Age</th><th>Gender</th><th>Parent Name</th><th>Parent Phone</th><th>Date Registered</th></tr></thead><tbody>${tableRows}</tbody></table></body>
       </html>
     `;
     const printWindow = window.open('', '_blank', 'width=1200,height=900');
@@ -513,6 +517,7 @@ export default function MasterList() {
         <table>
           <thead>
             <tr>
+              <th>No.</th>
               <th>Student ID</th>
               <th>Full Name</th>
               <th>Year Level</th>
