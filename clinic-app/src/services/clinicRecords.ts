@@ -320,13 +320,8 @@ export async function createBmiRecord(record: BmiRecord) {
     saveBmiRecords(nextRecords);
     return saved;
   } catch (error) {
-    console.warn('[createBmiRecord] API error, falling back to localStorage:', error);
-    const bmiRecord = {
-      ...record,
-      createdAt: record.createdAt || new Date().toISOString(),
-    };
-    saveBmiRecords([bmiRecord, ...getBmiRecords()]);
-    return bmiRecord;
+    console.error('[createBmiRecord] API error during BMI save:', error);
+    throw error;
   }
 }
 
