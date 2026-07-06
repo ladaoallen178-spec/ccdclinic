@@ -516,8 +516,21 @@ export default function MasterList() {
           </button>
         </div>
         {isUploading ? (
-          <div className="upload-progress" style={{ marginTop: 10, fontSize: '0.95rem', color: '#1f4d2f' }}>
-            Uploading {uploadProgress} / {uploadTotal} students...
+          <div className="upload-progress" style={{ marginTop: 10 }}>
+            <div style={{ marginBottom: 6, fontSize: '0.95rem', color: '#1f4d2f' }}>
+              Uploading {uploadProgress} / {uploadTotal} students...
+            </div>
+            <div style={{ width: '100%', background: '#d9ebda', borderRadius: 999, height: 14, overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: uploadTotal > 0 ? `${Math.round((uploadProgress / uploadTotal) * 100)}%` : '0%',
+                  minWidth: '8px',
+                  height: '100%',
+                  background: '#1d6332',
+                  transition: 'width 0.2s ease',
+                }}
+              />
+            </div>
           </div>
         ) : null}
         {uploadError ? (
