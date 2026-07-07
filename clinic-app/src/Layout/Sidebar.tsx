@@ -45,6 +45,7 @@ function Sidebar() {
     { to: '/inventory', label: 'Inventory', icon: Package, badge: clinicStats.lowStock ? String(clinicStats.lowStock) : undefined },
     { to: '/register-nurse', label: 'Register Nurse', icon: UserPlus },
     { to: '/monthly-report', label: 'Monthly Report', icon: FileBarChart },
+    { to: '/about-system', label: 'About the System', icon: FileBarChart },
   ];
 
   const handleLogout = () => {

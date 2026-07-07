@@ -13,6 +13,7 @@ import Inventory from "./pages/Inventory";
 import MasterList from "./pages/MasterList";
 import MonthlyReport from "./pages/MonthlyReport";
 import RegisterNurse from "./pages/RegisterNurse";
+import AboutSystem from "./pages/AboutSystem";
 import { isAuthenticated } from "./services/auth";
 
 function RequireAuth() {
@@ -47,6 +48,7 @@ function App() {
             <Route path="master-list" element={<MasterList />} />
             <Route path="register-nurse" element={<RegisterNurse />} />
             <Route path="monthly-report" element={<MonthlyReport />} />
+            <Route path="about-system" element={<AboutSystem />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />
