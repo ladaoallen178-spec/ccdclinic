@@ -101,9 +101,16 @@ export default function AddNewVisit() {
       let visitIdNumber: string | undefined = undefined;
 
       if (patientType === 'Student') {
-        const existingStudent = students.find(
-          (student) => student.id === idNumber || student.name.toLowerCase() === effectiveName.toLowerCase(),
-        );
+        const normalizedId = normalizePatientIdentifier(idNumber);
+        const normalizedName = normalizePatientName(effectiveName);
+        const existingStudent = students.find((student) => {
+          const studentId = normalizePatientIdentifier(student.id);
+          const studentName = normalizePatientName(student.name);
+          return (
+            (studentId && normalizedId && studentId === normalizedId) ||
+            (studentName && normalizedName && studentName === normalizedName)
+          );
+        });
         const student: StudentRecord = existingStudent
           ? {
               ...existingStudent,
@@ -363,6 +370,14 @@ export default function AddNewVisit() {
 function createPatientId(patientType: string) {
   const prefix = patientType.toLowerCase() === 'staff' ? 'T' : 'S';
   return `${prefix}-${Date.now()}`;
+}
+
+function normalizePatientIdentifier(value: string) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function normalizePatientName(value: string) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
 }
 
 function getSaveErrorMessage(error: unknown) {
