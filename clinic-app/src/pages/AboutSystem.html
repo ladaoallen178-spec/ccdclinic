@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About the System | CCD School Clinic Management System</title>
+  <style>
+    :root {
+      --green: #3a7d44;
+      --light-green: #f5f8f5;
+      --dark-green: #1a2e1a;
+      --gold: #b8860b;
+      --surface: #ffffff;
+      --surface-soft: #f8faf8;
+      --border: rgba(58, 125, 68, 0.15);
+      --text: #0f172a;
+      --muted: #475569;
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #f8fcf8 0%, #e8f2e8 100%);
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--green);
+      text-decoration: none;
+    }
+
+    .page-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+    }
+
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 32px;
+      background: linear-gradient(90deg, rgba(58,125,68,.98), rgba(26,46,26,.98));
+      color: #fff;
+    }
+
+    .hero-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-mark {
+      width: 58px;
+      height: 58px;
+      background: #ffffff;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 0 1px rgba(58,125,68,0.16);
+    }
+
+    .hero-title {
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-title h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 2.0vw, 2.8rem);
+      letter-spacing: -0.03em;
+    }
+
+    .hero-subtitle {
+      margin: 0;
+      color: rgba(255,255,255,0.92);
+      font-size: 1rem;
+      max-width: 540px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.26);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .badge span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      display: inline-grid;
+      place-items: center;
+    }
+
+    .hero-content {
+      padding: 32px 32px 34px;
+      display: grid;
+      gap: 26px;
+      background: var(--light-green);
+      border-top: 1px solid rgba(58, 125, 68, 0.12);
+    }
+
+    .hero-content p {
+      margin: 0;
+      font-size: 1.02rem;
+      color: var(--text);
+    }
+
+    .section {
+      margin-top: 32px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .section-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section-inner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(58,125,68,0.08), transparent 35%);
+      pointer-events: none;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2 {
+      margin: 0;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-header .section-icon {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: rgba(58, 125, 68, 0.12);
+      color: var(--green);
+      font-size: 1.2rem;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(58,125,68,0.14);
+      margin: 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .info-card,
+    .staff-card,
+    .dev-card,
+    .function-card {
+      background: #fff;
+      border: 1px solid rgba(58,125,68,0.12);
+      border-radius: 20px;
+      padding: 22px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-card:hover,
+    .staff-card:hover,
+    .dev-card:hover,
+    .function-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 48px rgba(15, 23, 42, 0.12);
+    }
+
+    .info-card-icon,
+    .function-card-icon,
+    .staff-card-icon,
+    .dev-card-icon {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: rgba(58,125,68,0.10);
+      color: var(--green);
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+    }
+
+    .info-card-title,
+    .function-card-title,
+    .staff-card-title,
+    .dev-card-title {
+      margin: 0 0 10px;
+      color: var(--dark-green);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .info-card-text,
+    .function-card-text,
+    .staff-card-text,
+    .dev-card-text {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.8;
+    }
+
+    .function-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .function-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(58,125,68,0.05);
+      border: 1px solid rgba(58,125,68,0.08);
+    }
+
+    .function-item:nth-child(even) {
+      background: rgba(58,125,68,0.04);
+    }
+
+    .function-item::before {
+      content: "✔";
+      font-size: 0.9rem;
+      margin-top: 3px;
+      color: var(--gold);
+    }
+
+    .staff-grid,
+    .dev-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .staff-card-title,
+    .dev-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .staff-name,
+    .dev-name {
+      margin: 0;
+      font-size: 1.05rem;
+    }
+
+    .role-badge,
+    .status-badge,
+    .tech-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #1a2e1a;
+      background: rgba(184, 134, 11, 0.15);
+      border: 1px solid rgba(184, 134, 11, 0.18);
+    }
+
+    .status-badge {
+      background: rgba(58,125,68,0.13);
+      border-color: rgba(58,125,68,0.2);
+      color: var(--green);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .section-footer {
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    .footer-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding-top: 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.25s ease, transform 0.25s ease;
+      text-decoration: none;
+    }
+
+    .back-button:hover {
+      background: #2f6636;
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 900px) {
+      .hero-top, .hero-meta {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-shell {
+        padding: 18px 16px 32px;
+      }
+
+      .hero-top {
+        padding: 22px 20px;
+      }
+
+      .hero-content {
+        padding: 24px 20px 26px;
+      }
+
+      .section-inner {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="hero-logo">
+          <div class="logo-mark">CCD</div>
+          <div>
+            <p style="margin: 0; font-size: 0.92rem; letter-spacing: 0.12em; color: rgba(255,255,255,0.85);">COLLEGE OF DAVAO</p>
+            <h2 style="margin: 8px 0 0; font-size: 1.35rem; letter-spacing: 0.02em;">Clinic Management System</h2>
+          </div>
+        </div>
+        <div class="hero-meta">
+          <div class="badge"><span></span>System Version 2.3</div>
+          <div class="badge"><span></span>Secure Clinic Operations</div>
+        </div>
+      </div>
+
+      <div class="hero-content">
+        <div style="display: grid; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--gold);"></div>
+            <p style="margin: 0; color: var(--green); font-size: 0.96rem; font-weight: 700; letter-spacing: 0.02em;">About the System</p>
+          </div>
+          <p style="margin: 0; font-size: 1.06rem; color: var(--text); max-width: 800px;">
+            The CCD School Clinic Management System is a centralized web platform designed to help school clinic staff deliver efficient health support for students and employees. It organizes clinic visits, patient information, medical records, reports and inventory so nurses can make timely decisions and keep the school community healthy.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="section">
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-icon">🩺</div>
+          <h2>What the system does</h2>
+        </div>
+        <p style="margin: 0 0 20px; color: var(--muted);">
+          This system is built to support clinic operations across a school campus. It helps register and manage student and staff visits, capture medical concerns, store health records, and generate insights for better care coordination. The system also includes tools for managing clinic inventory, staff assignments, and health documentation.
+        </p>
+        <div class="grid-3">
+          <div class="info-card">
+            <div class="info-card-icon">📋</div>
+            <p class="info-card-title">Patient intake</p>
+            <p class="info-card-text">Track student and staff clinic visits with accurate intake details and care status.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">📚</div>
+            <p class="info-card-title">Medical records</p>
+            <p class="info-card-text">Store searchable visit histories, year/program data, and health notes in one place.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">📄</div>
+            <p class="info-card-title">Health documents</p>
+            <p class="info-card-text">Generate and manage reports, medical documents, and clinic paperwork securely.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">📊</div>
+            <p class="info-card-title">Staff summaries</p>
+            <p class="info-card-text">Review clinic staff performance, patient status, and daily healthcare operations.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">⚠️</div>
+            <p class="info-card-title">Inventory alerts</p>
+            <p class="info-card-text">Monitor supplies and receive automated low-stock notifications for clinic items.</p>
+          </div>
+          <div class="info-card">
+            <div class="info-card-icon">🗓️</div>
+            <p class="info-card-title">Monthly reports</p>
+            <p class="info-card-text">Generate monthly performance reports for audits, planning, and school health review.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-icon">✅</div>
+          <h2>System functions</h2>
+        </div>
+        <div class="function-list">
+          <div class="function-item">Record student and staff clinic visits with date, concern, and treatment details.</div>
+          <div class="function-item">Store and search patient histories, year/program data, and visit outcomes.</div>
+          <div class="function-item">Generate medical documents, receipts, and reports for clinic administration.</div>
+          <div class="function-item">Manage nurse and staff roles, patient status updates, and clinic workflows.</div>
+          <div class="function-item">Export student lists, reports, and records for school review and audits.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-icon">👩‍⚕️</div>
+          <h2>Clinic staff</h2>
+        </div>
+        <div class="staff-grid">
+          <div class="staff-card">
+            <div class="staff-card-title">
+              <div>
+                <p class="staff-name">Janice Leonora B. Abellara</p>
+                <p class="staff-card-text">LPT, RN</p>
+              </div>
+              <span class="status-badge">Active</span>
+            </div>
+            <p class="staff-card-text" style="margin-top: 14px;">Nurse ||</p>
+          </div>
+          <div class="staff-card">
+            <div class="staff-card-title">
+              <div>
+                <p class="staff-name">Kim C. Paran</p>
+                <p class="staff-card-text">AEMT</p>
+              </div>
+              <span class="status-badge">On Duty</span>
+            </div>
+            <p class="staff-card-text" style="margin-top: 14px;">EMT |</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-inner">
+        <div class="section-header">
+          <div class="section-icon">💻</div>
+          <h2>Developers</h2>
+        </div>
+        <div class="dev-grid">
+          <div class="dev-card">
+            <div class="dev-card-title">
+              <div>
+                <p class="dev-name">Christian Gutierrez</p>
+                <p class="dev-card-text">Frontend Developer</p>
+              </div>
+              <span class="role-badge">Design & UI</span>
+            </div>
+            <div class="tag-row">
+              <span class="tech-tag">React</span>
+              <span class="tech-tag">CSS</span>
+              <span class="tech-tag">UI/UX</span>
+            </div>
+          </div>
+          <div class="dev-card">
+            <div class="dev-card-title">
+              <div>
+                <p class="dev-name">Clarence Ladio</p>
+                <p class="dev-card-text">Backend Developer</p>
+              </div>
+              <span class="role-badge">API & Database</span>
+            </div>
+            <div class="tag-row">
+              <span class="tech-tag">Rust</span>
+              <span class="tech-tag">PostgreSQL</span>
+              <span class="tech-tag">Security</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="section-footer">
+      <p>Back to the dashboard: <a class="back-button" href="/dashboard">Go to Dashboard</a></p>
+    </div>
+
+    <div class="footer-meta">
+      <span>© 2026 CCD School Clinic Management System</span>
+      <span>Built with React, Node, and PostgreSQL</span>
+      <span>Last Updated: July 7, 2026</span>
+    </div>
+  </div>
+</body>
+</html>
