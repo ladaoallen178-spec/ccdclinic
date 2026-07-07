@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinic Visit Receipt</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+    background:#f5f5f5;
+    padding:30px;
+}
+
+.receipt{
+    width:800px;
+    margin:auto;
+    background:#fff;
+    padding:40px;
+    border:1px solid #ddd;
+}
+
+.header{
+    text-align:center;
+}
+
+.header img{
+    width:85px;
+    height:85px;
+    object-fit:contain;
+    margin-bottom:10px;
+}
+
+.header h1{
+    font-size:28px;
+    letter-spacing:2px;
+}
+
+.header h3{
+    color:#777;
+    font-weight:normal;
+    margin-top:5px;
+}
+
+.header p{
+    color:#999;
+    font-style:italic;
+    margin-top:4px;
+}
+
+hr{
+    border:none;
+    border-top:2px dashed #555;
+    margin:25px 0;
+}
+
+.title{
+    text-align:center;
+    font-size:28px;
+    font-weight:bold;
+    letter-spacing:2px;
+    margin-bottom:25px;
+}
+
+.section{
+    margin-bottom:28px;
+    border-left:5px solid #2e7d32;
+    padding-left:15px;
+}
+
+.section h2{
+    color:#2e7d32;
+    font-size:18px;
+    margin-bottom:15px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+td{
+    padding:6px 0;
+    vertical-align:top;
+}
+
+.label{
+    width:220px;
+    font-weight:bold;
+}
+
+.reason{
+    line-height:1.7;
+}
+
+.remarks-textarea {
+    width:100%;
+    min-height:120px;
+    padding:10px;
+    font-family:Arial, Helvetica, sans-serif;
+    font-size:14px;
+    line-height:1.6;
+    border:1px solid #ccc;
+    border-radius:6px;
+    resize:vertical;
+    white-space:pre-wrap;
+}
+
+.reminders li{
+    margin-bottom:8px;
+}
+
+.footer{
+    text-align:center;
+    margin-top:40px;
+    font-size:13px;
+    color:#666;
+}
+
+@media print{
+
+body{
+    background:white;
+    padding:0;
+}
+
+.receipt{
+    border:none;
+    width:100%;
+    box-shadow:none;
+}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="receipt">
+
+<div class="header">
+
+<!-- CHANGE logo.png TO YOUR SCHOOL LOGO -->
+<img src="logo.png" alt="School Logo">
+
+<h1>SCHOOL CLINIC</h1>
+
+<h3>Health Service Department</h3>
+
+<p>"Your Health, Our Priority"</p>
+
+</div>
+
+<hr>
+
+<div class="title" id="receiptTitle">
+CLINIC VISIT RECEIPT
+</div>
+
+<div class="section">
+
+<h2 id="patientHeading">🧑 Student Information</h2>
+
+<table>
+
+<tr>
+<td class="label" id="idLabel">Student ID:</td>
+<td id="idValue">2024-00123</td>
+</tr>
+
+<tr>
+<td class="label">Full Name:</td>
+<td id="nameValue">Juan Dela Cruz</td>
+</tr>
+
+<tr>
+<td class="label">Age / Gender:</td>
+<td id="ageGenderValue">18 Years Old / Male</td>
+</tr>
+
+<tr id="yearProgramRow">
+<td class="label">Year & Program:</td>
+<td id="yearProgramValue">1st Year - BSIT</td>
+</tr>
+
+<tr id="parentGuardianRow">
+<td class="label">Parent / Guardian:</td>
+<td id="parentGuardianValue">Maria Dela Cruz</td>
+</tr>
+
+<tr id="contactNumberRow">
+<td class="label">Contact Number:</td>
+<td id="contactNumberValue">09123456789</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>🩺 Visit Information</h2>
+
+<table>
+
+<tr>
+<td class="label">Date of Visit:</td>
+<td id="visitDateValue">May 26, 2026</td>
+</tr>
+
+<tr>
+<td class="label">Time of Visit:</td>
+<td id="visitTimeValue">10:41 AM</td>
+</tr>
+
+<tr>
+<td class="label">Attended By:</td>
+<td id="attendedByValue">Nurse Master Admin</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>💊 Medical Assessment</h2>
+
+<table>
+
+<tr>
+<td class="label">Reason for Visit:</td>
+<td class="reason" id="reasonValue">
+Headache, Fever, Stomach Ache
+</td>
+</tr>
+
+<tr>
+<td class="label">Temperature:</td>
+<td id="tempValue">36.0 °C</td>
+</tr>
+
+<tr>
+<td class="label">Blood Pressure:</td>
+<td id="bpValue">120/80 mmHg</td>
+</tr>
+
+<tr>
+<td class="label">Medicine Given:</td>
+<td id="medicineValue">Paracetamol 500mg</td>
+</tr>
+
+<tr>
+<td class="label">Remarks:</td>
+<td><textarea class="remarks-textarea" id="remarksField">Patient advised to rest and stay hydrated.</textarea></td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>📋 Reminders</h2>
+
+<ul class="reminders">
+
+<li>✔ Please rest and drink plenty of water.</li>
+
+<li>✔ Take the prescribed medicine on time.</li>
+
+<li>✔ Follow up at the clinic if symptoms persist.</li>
+
+<li>✔ Inform your teacher/adviser if necessary.</li>
+
+</ul>
+
+</div>
+
+<hr>
+
+<div class="footer">
+
+<strong>This is a computer-generated receipt.</strong>
+
+<br><br>
+
+For medical emergencies, please contact the school clinic immediately.
+
+</div>
+
+</div>
+
+<script>
+function setReceiptData(data) {
+  document.getElementById('receiptTitle').textContent = data.receiptTitle || 'CLINIC VISIT RECEIPT';
+  document.getElementById('patientHeading').textContent = data.patientHeading || '🧑 Student Information';
+  document.getElementById('idLabel').textContent = data.idLabel || 'Student ID:';
+  document.getElementById('idValue').textContent = data.idValue || '-';
+  document.getElementById('nameValue').textContent = data.nameValue || '-';
+  document.getElementById('ageGenderValue').textContent = data.ageGenderValue || '-';
+  document.getElementById('yearProgramValue').textContent = data.yearProgramValue || '-';
+  document.getElementById('parentGuardianValue').textContent = data.parentGuardianValue || '-';
+  document.getElementById('contactNumberValue').textContent = data.contactNumberValue || '-';
+  document.getElementById('visitDateValue').textContent = data.visitDateValue || '-';
+  document.getElementById('visitTimeValue').textContent = data.visitTimeValue || '-';
+  document.getElementById('attendedByValue').textContent = data.attendedByValue || '-';
+  document.getElementById('reasonValue').textContent = data.reasonValue || '-';
+  document.getElementById('tempValue').textContent = data.tempValue || '-';
+  document.getElementById('bpValue').textContent = data.bpValue || '-';
+  document.getElementById('medicineValue').textContent = data.medicineValue || '-';
+  document.getElementById('remarksField').value = data.remarksValue || '-';
+}
+
+function prepareAndPrint(){
+  window.focus();
+  window.print();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const data = window.opener?.__visitReceiptData;
+  if (data) {
+    setReceiptData(data);
+  }
+});
+</script>
+
+</body>
+</html>
