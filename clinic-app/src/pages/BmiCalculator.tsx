@@ -55,6 +55,8 @@ export default function BmiCalculator() {
   const [weight, setWeight] = useState('');
   const [studentId, setStudentId] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<StudentRecord | null>(null);
+  const [suggestions, setSuggestions] = useState<StudentRecord[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [bmiRecords, setBmiRecords] = useState<BmiRecord[]>(getBmiRecords);
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
 
@@ -93,6 +95,16 @@ export default function BmiCalculator() {
     });
 
     if (!student) {
+      // If there are suggestions, choose the first match
+      if (suggestions.length > 0) {
+        const first = suggestions[0];
+        setSelectedStudent(first);
+        setStudentId(first.id);
+        setShowSuggestions(false);
+        toast.success('Student selected');
+        return;
+      }
+
       setSelectedStudent(null);
       toast.error('Student not found');
       return;
@@ -102,6 +114,24 @@ export default function BmiCalculator() {
     toast.success('Student found');
     setStudentId(student.id);
   };
+
+  function updateSuggestions(term: string) {
+    const t = term.trim().toLowerCase();
+    if (!t) {
+      setSuggestions([]);
+      return;
+    }
+
+    const matches = students
+      .filter((item) => {
+        const id = normalizeStudentId(item.id);
+        const name = (item.name || '').toLowerCase();
+        return id.includes(t) || name.includes(t);
+      })
+      .slice(0, 10);
+
+    setSuggestions(matches);
+  }
 
   const calculateBmi = () => {
     if (!height || !weight) {
@@ -248,7 +278,42 @@ export default function BmiCalculator() {
             Find & Record Student
           </h2>
           <form className="bmi-search-row" onSubmit={handleSearchSubmit}>
-            <input value={studentId} onChange={(event) => setStudentId(event.target.value)} placeholder="Enter Student ID (e.g., S001)" />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                value={studentId}
+                onChange={(event) => {
+                  setStudentId(event.target.value);
+                  updateSuggestions(event.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => { if (suggestions.length) setShowSuggestions(true); }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Enter Student ID (e.g., S001)"
+                aria-autocomplete="list"
+                aria-haspopup="true"
+              />
+              {showSuggestions && suggestions.length > 0 ? (
+                <ul className="autocomplete-list" style={{ position: 'absolute', zIndex: 40, background: '#fff', boxShadow: '0 6px 18px rgba(0,0,0,0.08)', width: '100%', margin: 0, padding: 0, listStyle: 'none', maxHeight: 240, overflowY: 'auto' }}>
+                  {suggestions.map((s) => (
+                    <li
+                      key={s.id}
+                      role="option"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setSelectedStudent(s);
+                        setStudentId(s.id);
+                        setShowSuggestions(false);
+                        toast.success('Student selected');
+                      }}
+                      style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}
+                    >
+                      <strong>{s.name}</strong>
+                      <div style={{ fontSize: 12, color: '#666' }}>{s.id} — {(s.section || [s.yearLevel, s.program].filter(Boolean).join('/'))}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
             <button type="submit">
               <Search size={17} aria-hidden="true" />
               Search
