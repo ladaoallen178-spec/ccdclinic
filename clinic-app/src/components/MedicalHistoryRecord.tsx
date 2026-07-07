@@ -18,15 +18,15 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
     });
 
   const handlePrint = () => {
-    const receiptWindow = window.open('', 'receipt1', 'width=900,height=900');
+    const receiptData = getHistoryReceiptData(type, record, matchingVisits);
+    (window as any).__medicalHistoryReceiptData = receiptData;
+
+    const receiptWindow = window.open('/reciept1.html', 'receipt1', 'width=900,height=900');
 
     if (!receiptWindow) {
       return;
     }
 
-    receiptWindow.document.open();
-    receiptWindow.document.write(buildHistoryReceiptHtml(type, record, matchingVisits));
-    receiptWindow.document.close();
     receiptWindow.focus();
   };
 
@@ -34,12 +34,11 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
     <section className="history-record-page">
       <header className="history-record-banner">
         <div className="history-record-brand">
-          <img src="/images/logo.png" alt="CCD Clinic" />
+          <img src="/images/logo.png" alt="School Logo" />
           <div>
-            <strong>{type} Medical History</strong>
-            <span>
-              {record.name} | {record.id}
-            </span>
+            <strong>SCHOOL CLINIC</strong>
+            <span>Health Service Department</span>
+            <span className="history-record-tagline">"Your Health, Our Priority"</span>
           </div>
         </div>
         <button type="button" className="history-back-button" onClick={onBack}>
@@ -48,11 +47,15 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
         </button>
       </header>
 
+      <article className="history-document-heading">
+        <strong>{type.toUpperCase()} MEDICAL HISTORY RECORD</strong>
+        <span>Official Clinic Medical Record</span>
+      </article>
+
       <article className="history-profile-card">
-        <h2>
-          <ClipboardList size={22} aria-hidden="true" />
-          Patient Details
-        </h2>
+        <div className="history-card-header">
+          <strong>PERSONAL INFORMATION</strong>
+        </div>
         <div className="history-profile-grid">
           <Detail label={`${type} ID`} value={record.id} />
           <Detail label="Name" value={record.name} />
@@ -89,6 +92,9 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
       </div>
 
       <article className="history-table-card">
+        <div className="history-card-header history-card-header--small">
+          <strong>MEDICAL HISTORY</strong>
+        </div>
         <table className="history-record-table">
           <thead>
             <tr>
@@ -124,6 +130,17 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
           </tbody>
         </table>
       </article>
+
+      <footer className="history-print-footer">
+        <div className="print-meta">
+          <span>Date Printed:</span>
+          <strong>{formatDateTime(new Date().toISOString())}</strong>
+        </div>
+        <div className="print-signature">
+          <div className="signature-line" />
+          <span>Authorized Clinic Personnel</span>
+        </div>
+      </footer>
     </section>
   );
 }
@@ -156,50 +173,74 @@ function formatDateTime(value?: string) {
   }).format(new Date(value));
 }
 
-function buildHistoryReceiptHtml(type: 'Student' | 'Staff', record: StudentRecord | StaffRecord, visits: VisitRecord[]) {
+function getHistoryReceiptData(type: 'Student' | 'Staff', record: StudentRecord | StaffRecord, visits: VisitRecord[]) {
   const headerTitle = type === 'Student' ? 'STUDENT MEDICAL HISTORY RECORD' : 'STAFF MEDICAL HISTORY RECORD';
   const subtitle = 'Official Clinic Medical Record';
   const idLabel = type === 'Student' ? 'Student ID' : 'Staff ID';
-  const idValue = escapeHtml(record.id);
-  const nameValue = escapeHtml(record.name);
-  const ageValue = escapeHtml(record.age.toString());
-  const genderValue = escapeHtml(record.gender);
+  const idValue = record.id;
+  const nameValue = record.name;
+  const ageValue = record.age.toString();
+  const genderValue = record.gender;
   const extraFields =
     type === 'Student'
       ? [
-          ['Year/Program', escapeHtml(getStudentYearProgram(record as StudentRecord))],
-          ['Parent/Guardian', escapeHtml((record as StudentRecord).parentName || '-')],
-          ['Parent Phone', escapeHtml((record as StudentRecord).parentPhone || '-')],
+          { label: 'Year/Program', value: getStudentYearProgram(record as StudentRecord) },
+          { label: 'Parent/Guardian', value: (record as StudentRecord).parentName || '-' },
+          { label: 'Parent Phone', value: (record as StudentRecord).parentPhone || '-' },
         ]
       : [
-          ['Staff Type', escapeHtml((record as StaffRecord).staffType || '-')],
-          ['Department', escapeHtml((record as StaffRecord).department || '-')],
-          ['Position', escapeHtml((record as StaffRecord).position || '-')],
-          ['Contact', escapeHtml((record as StaffRecord).contactNumber || '-')],
+          { label: 'Staff Type', value: (record as StaffRecord).staffType || '-' },
+          { label: 'Department', value: (record as StaffRecord).department || '-' },
+          { label: 'Position', value: (record as StaffRecord).position || '-' },
+          { label: 'Contact', value: (record as StaffRecord).contactNumber || '-' },
         ];
-  const currentConcern = escapeHtml(record.concern || '-');
-  const status = escapeHtml(record.status || '-');
-  const rows = visits
+  const currentConcern = record.concern || '-';
+  const status = record.status || '-';
+  const rows = visits.map((visit) => ({
+    dateTime: formatDateTime(visit.createdAt),
+    reason: visit.reasonForVisit || visit.concern || '-',
+    temperature: visit.temperature ? `${visit.temperature}°C` : '-',
+    bloodPressure: visit.bloodPressure || '-',
+    medicine: visit.medicineGiven || '-',
+    referred: visit.referredToHospital ? 'Yes' : 'No',
+    status: visit.status || '-',
+  }));
+
+  return {
+    headerTitle,
+    subtitle,
+    idLabel,
+    idValue,
+    nameValue,
+    ageValue,
+    genderValue,
+    extraFields,
+    currentConcern,
+    status,
+    rows,
+    datePrinted: formatDateTime(new Date().toISOString()),
+  };
+}
+
+function buildHistoryReceiptHtml(type: 'Student' | 'Staff', record: StudentRecord | StaffRecord, visits: VisitRecord[]) {
+  const data = getHistoryReceiptData(type, record, visits);
+  const extraFieldsHtml = data.extraFields
+    .map((field) => `<div><strong>${field.label}:</strong> ${field.value}</div>`)
+    .join('');
+  const rowsHtml = data.rows
     .slice(0, 20)
-    .map((visit) => {
-      const dateTime = escapeHtml(formatDateTime(visit.createdAt));
-      const reason = escapeHtml(visit.reasonForVisit || visit.concern || '-');
-      const temperature = escapeHtml(visit.temperature ? `${visit.temperature}°C` : '-');
-      const bloodPressure = escapeHtml(visit.bloodPressure || '-');
-      const medicine = escapeHtml(visit.medicineGiven || '-');
-      const referred = escapeHtml(visit.referredToHospital ? 'Yes' : 'No');
-      const visitStatus = escapeHtml(visit.status || '-');
-      return `
+    .map(
+      (visit) => `
         <tr>
-          <td>${dateTime}</td>
-          <td>${reason}</td>
-          <td>${temperature}</td>
-          <td>${bloodPressure}</td>
-          <td>${medicine}</td>
-          <td>${referred}</td>
-          <td>${visitStatus}</td>
-        </tr>`;
-    })
+          <td>${visit.dateTime}</td>
+          <td>${visit.reason}</td>
+          <td>${visit.temperature}</td>
+          <td>${visit.bloodPressure}</td>
+          <td>${visit.medicine}</td>
+          <td>${visit.referred}</td>
+          <td>${visit.status}</td>
+        </tr>`,
+    )
     .join('');
 
   return `<!DOCTYPE html>
@@ -207,7 +248,7 @@ function buildHistoryReceiptHtml(type: 'Student' | 'Staff', record: StudentRecor
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${headerTitle}</title>
+<title>${data.headerTitle}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif}
 body{background:#f4f6f8;padding:30px}
@@ -249,25 +290,25 @@ td{border:1px solid #ddd;padding:10px;text-align:center;font-size:14px}
 </div>
 </div>
 <hr />
-<div class="title">${headerTitle}</div>
-<div class="subtitle">${subtitle}</div>
+<div class="title">${data.headerTitle}</div>
+<div class="subtitle">${data.subtitle}</div>
 <div class="section-title">PERSONAL INFORMATION</div>
 <div class="info-grid">
-<div><strong>${idLabel}:</strong> ${idValue}</div>
-<div><strong>Name:</strong> ${nameValue}</div>
-<div><strong>Age:</strong> ${ageValue}</div>
-<div><strong>Gender:</strong> ${genderValue}</div>
-${extraFields.map(([label, value]) => `<div><strong>${label}:</strong> ${value}</div>`).join('')}
-<div><strong>Current Concern:</strong> ${currentConcern}</div>
-<div><strong>Current Status:</strong> ${status}</div>
+<div><strong>${data.idLabel}:</strong> ${data.idValue}</div>
+<div><strong>Name:</strong> ${data.nameValue}</div>
+<div><strong>Age:</strong> ${data.ageValue}</div>
+<div><strong>Gender:</strong> ${data.genderValue}</div>
+${extraFieldsHtml}
+<div><strong>Current Concern:</strong> ${data.currentConcern}</div>
+<div><strong>Current Status:</strong> ${data.status}</div>
 </div>
 <div class="section-title">MEDICAL HISTORY</div>
 <table>
 <tr><th>Date & Time</th><th>Reason</th><th>Temperature</th><th>Blood Pressure</th><th>Medicine</th><th>Referred</th><th>Status</th></tr>
-${rows || '<tr><td colspan="7" style="padding:16px;text-align:center;color:#666">No history available</td></tr>'}
+${rowsHtml || '<tr><td colspan="7" style="padding:16px;text-align:center;color:#666">No history available</td></tr>'}
 </table>
 <div class="bottom-section">
-<div class="date-printed"><strong>Date Printed:</strong><br />${escapeHtml(formatDateTime(new Date().toISOString()))}</div>
+<div class="date-printed"><strong>Date Printed:</strong><br />${data.datePrinted}</div>
 <div class="signature"><div class="signature-line"></div><p><strong>Authorized Clinic Personnel</strong></p><small>Signature over Printed Name</small></div>
 </div>
 <hr />
