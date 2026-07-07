@@ -47,8 +47,8 @@ const AboutSystem: React.FC = () => {
           <h3 style={{ marginBottom: 12, color: '#0f172a' }}>Clinic Staff</h3>
           <p style={{ margin: '0 0 16px', color: '#475569', lineHeight: 1.8 }}>The system is supported by qualified healthcare staff from the school clinic.</p>
           <ul style={{ color: '#334155', lineHeight: 1.9, paddingLeft: 20 }}>
-            <li>Janice Leonora B. Abellara, LPT, RN — Nurse</li>
-            <li>Kim C. Paran, AEMT — EMT</li>
+            <li>Janice Leonora B. Abellara, LPT, RN — Nurse ||</li>
+            <li>Kim C. Paran, AEMT — EMT |</li>
           </ul>
         </div>
 
