@@ -1,19 +1,42 @@
-import { Outlet } from 'react-router-dom';
-import Header from './Header';
+﻿import React, { useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import Header from './Header';
 
-function Layout() {
+const Layout: React.FC = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const hasToken = !!localStorage.getItem('token');
+    if (!hasToken) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   return (
-    <div className="app-shell">
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar />
-      <main className="app-main">
+      <div className="app-main">
         <Header />
-        <section className="page-content">
+        <main style={{ padding: '20px', paddingBottom: '80px' }}>
           <Outlet />
-        </section>
-      </main>
+        </main>
+        <footer
+          style={{
+            marginTop: 'auto',
+            padding: '16px 20px 24px',
+            textAlign: 'center',
+            color: '#5f6f64',
+            fontSize: '0.9rem',
+            borderTop: '1px solid #e5ece6',
+            backgroundColor: '#f8fbf8',
+          }}
+        >
+          Developed by Christian Guiterez and Clarence Ladao
+        </footer>
+      </div>
     </div>
   );
-}
+};
 
 export default Layout;
