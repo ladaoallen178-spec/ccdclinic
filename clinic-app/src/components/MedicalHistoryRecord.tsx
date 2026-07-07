@@ -25,12 +25,11 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
     <section className="history-record-page">
       <header className="history-record-banner">
         <div className="history-record-brand">
-          <img src="/images/logo.png" alt="CCD Clinic" />
+          <img src="/images/logo.png" alt="School Logo" />
           <div>
-            <strong>{type} Medical History</strong>
-            <span>
-              {record.name} | {record.id}
-            </span>
+            <strong>SCHOOL CLINIC</strong>
+            <span>Health Service Department</span>
+            <span className="history-record-tagline">"Your Health, Our Priority"</span>
           </div>
         </div>
         <button type="button" className="history-back-button" onClick={onBack}>
@@ -39,10 +38,15 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
         </button>
       </header>
 
+      <article className="history-record-heading">
+        <strong>{type.toUpperCase()} MEDICAL HISTORY RECORD</strong>
+        <span>Official Clinic Medical Record</span>
+      </article>
+
       <article className="history-profile-card">
         <h2>
           <ClipboardList size={22} aria-hidden="true" />
-          Patient Details
+          Personal Information
         </h2>
         <div className="history-profile-grid">
           <Detail label={`${type} ID`} value={record.id} />
@@ -80,6 +84,7 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
       </div>
 
       <article className="history-table-card">
+        <h2 className="history-section-title">Medical History</h2>
         <table className="history-record-table">
           <thead>
             <tr>
@@ -115,6 +120,17 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
           </tbody>
         </table>
       </article>
+
+      <footer className="history-print-footer">
+        <div className="print-meta">
+          <span>Date Printed:</span>
+          <strong>{formatDateTime(new Date().toISOString())}</strong>
+        </div>
+        <div className="print-signature">
+          <div className="signature-line" />
+          <span>Authorized Clinic Personnel</span>
+        </div>
+      </footer>
     </section>
   );
 }

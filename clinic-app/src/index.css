@@ -2295,6 +2295,33 @@ th {
   letter-spacing: 0.3px;
 }
 
+.history-record-tagline {
+  font-size: 0.75rem;
+  color: #d1e7d0;
+  font-weight: 500;
+  margin-top: 6px;
+  display: block;
+}
+
+.history-record-heading {
+  display: grid;
+  gap: 6px;
+  padding: 0 18px;
+}
+
+.history-record-heading strong {
+  font-size: 1.75rem;
+  letter-spacing: -0.5px;
+  color: #0f2d17;
+  display: block;
+}
+
+.history-record-heading span {
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 .history-back-button {
   min-height: 40px;
   padding: 10px 18px;
@@ -2464,6 +2491,16 @@ th {
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(13, 93, 41, 0.1);
   border: 1px solid rgba(13, 93, 41, 0.05);
+  padding: 24px 24px 18px;
+}
+
+.history-section-title {
+  margin: 0 0 18px;
+  font-size: 1.2rem;
+  color: #0f2d17;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .history-record-table {
@@ -2499,6 +2536,45 @@ th {
   background: #ffffff;
   font-size: 0.9rem;
   border-bottom: 1px solid #e5e7eb;
+}
+
+.history-print-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px 0;
+}
+
+.print-meta span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.print-meta strong {
+  color: #0f2d17;
+  font-size: 0.95rem;
+}
+
+.print-signature {
+  display: grid;
+  gap: 10px;
+  width: min(340px, 100%);
+  text-align: center;
+}
+
+.signature-line {
+  height: 1px;
+  background: #374151;
+  border-radius: 2px;
+}
+
+.print-signature span {
+  color: #374151;
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .history-record-table tbody tr:hover td {
@@ -2588,7 +2664,7 @@ th {
     }
 
     .history-profile-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
       gap: 14px;
     }
 
