@@ -2515,12 +2515,37 @@ th {
       margin: 12mm;
     }
 
+    html,
     body {
+      width: 100%;
+      height: auto;
       margin: 0;
+      padding: 0;
       background: #ffffff;
       color: #0f2d17;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+    }
+
+    body * {
+      visibility: hidden !important;
+    }
+
+    .history-record-page,
+    .history-record-page * {
+      visibility: visible !important;
+    }
+
+    .history-record-page {
+      position: absolute;
+      top: 0;
+      left: 0;
+      gap: 16px;
+      width: 100%;
+      margin: 0;
+      padding: 16px;
+      background: #ffffff;
+      page-break-inside: avoid;
     }
 
     .sidebar,
@@ -2535,13 +2560,6 @@ th {
       display: none !important;
     }
 
-    .history-record-page {
-      gap: 16px;
-      width: auto;
-      margin: 0;
-      padding: 16px;
-      background: #ffffff;
-    }
 
     .history-record-banner {
       background: transparent;
