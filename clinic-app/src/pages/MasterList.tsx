@@ -119,20 +119,30 @@ export default function MasterList() {
       return;
     }
 
+    const getNextTextValue = (field: keyof StudentRecord) => {
+      const value = editedStudent[field];
+      if (typeof value !== 'string') {
+        return currentStudent[field] ?? '';
+      }
+
+      const trimmedValue = value.trim();
+      return trimmedValue || currentStudent[field] || '';
+    };
+
     const updatedStudent: StudentRecord = {
       ...currentStudent,
       ...editedStudent,
       id: currentStudent.id,
-      name: editedStudent.name?.trim() || currentStudent.name,
-      section: editedStudent.section?.trim() ?? currentStudent.section,
-      concern: editedStudent.concern?.trim() ?? currentStudent.concern,
+      name: getNextTextValue('name'),
+      section: getNextTextValue('section'),
+      concern: getNextTextValue('concern'),
       status: editedStudent.status ?? currentStudent.status,
-      age: editedStudent.age?.trim() ?? currentStudent.age,
-      gender: editedStudent.gender?.trim() ?? currentStudent.gender,
-      yearLevel: editedStudent.yearLevel?.trim() ?? currentStudent.yearLevel,
-      program: editedStudent.program?.trim() ?? currentStudent.program,
-      parentName: editedStudent.parentName?.trim() ?? currentStudent.parentName,
-      parentPhone: editedStudent.parentPhone?.trim() ?? currentStudent.parentPhone,
+      age: getNextTextValue('age'),
+      gender: getNextTextValue('gender'),
+      yearLevel: getNextTextValue('yearLevel'),
+      program: getNextTextValue('program'),
+      parentName: getNextTextValue('parentName'),
+      parentPhone: getNextTextValue('parentPhone'),
       createdAt: currentStudent.createdAt,
     };
 

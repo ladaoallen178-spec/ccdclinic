@@ -85,14 +85,30 @@ export async function loadStudents() {
 }
 
 export async function saveStudentRecord(record: StudentRecord) {
+  const existingStudent = getStudents().find((student) => student.id === record.id);
+  const normalizedRecord: StudentRecord = {
+    ...record,
+    name: record.name?.trim() || existingStudent?.name || record.name || '',
+    section: record.section?.trim() || existingStudent?.section || record.section || '',
+    concern: record.concern?.trim() || existingStudent?.concern || record.concern || '',
+    status: record.status || existingStudent?.status || 'Cleared',
+    age: record.age?.trim() || existingStudent?.age || record.age || '',
+    gender: record.gender?.trim() || existingStudent?.gender || record.gender || '',
+    yearLevel: record.yearLevel?.trim() || existingStudent?.yearLevel || record.yearLevel || '',
+    program: record.program?.trim() || existingStudent?.program || record.program || '',
+    parentName: record.parentName?.trim() || existingStudent?.parentName || record.parentName || '',
+    parentPhone: record.parentPhone?.trim() || existingStudent?.parentPhone || record.parentPhone || '',
+    createdAt: record.createdAt || existingStudent?.createdAt || new Date().toISOString(),
+  };
+
   try {
-    const response = await api.post('/api/students', toApiStudentPayload(record));
+    const response = await api.post('/api/students', toApiStudentPayload(normalizedRecord));
     const student = transformApiStudent(response.data);
     saveStudents(upsertById(getStudents(), student));
     return student;
   } catch (error) {
     console.error('[saveStudentRecord] API error:', error);
-    const fallbackStudent = { ...record, createdAt: record.createdAt || new Date().toISOString() };
+    const fallbackStudent = { ...normalizedRecord, createdAt: normalizedRecord.createdAt || new Date().toISOString() };
     saveStudents(upsertById(getStudents(), fallbackStudent));
     console.warn('[saveStudentRecord] Saved student record to localStorage fallback.');
     return fallbackStudent;
