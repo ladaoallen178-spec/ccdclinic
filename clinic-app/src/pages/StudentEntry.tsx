@@ -172,18 +172,35 @@ function StudentEntry() {
 
   const printReceipt = (visit: VisitRecord) => {
     const student = findStudentByVisit(visit, students);
-    const receipt = buildReceiptHtml(visit, student);
-    const receiptWindow = window.open('', '_blank', 'width=720,height=720');
+    const receiptData = {
+      receiptTitle: 'CLINIC VISIT RECEIPT',
+      patientHeading: '🧑 Student Information',
+      idLabel: 'Student ID:',
+      idValue: visit.idNumber || student?.id || '-',
+      nameValue: visit.patientName || student?.name || visit.name || 'Unknown Student',
+      ageGenderValue: `${student?.age || visit.age || '-'} Years Old / ${student?.gender || visit.gender || '-'}`,
+      yearProgramValue: visit.yearProgram || (student ? getYearProgram(student) : '-') || '-',
+      parentGuardianValue: student?.parentName || '-',
+      contactNumberValue: student?.parentPhone || '-',
+      visitDateValue: visit.visitDate || (visit.createdAt ? new Date(visit.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-'),
+      visitTimeValue: visit.createdAt ? new Date(visit.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '-',
+      attendedByValue: 'Nurse',
+      reasonValue: visit.reasonForVisit || visit.concern || '-',
+      tempValue: visit.temperature ? `${visit.temperature} °C` : '-',
+      bpValue: visit.bloodPressure || '-',
+      medicineValue: visit.medicineGiven || '-',
+      remarksValue: visit.remarks || 'Patient advised to rest and stay hydrated.',
+    };
+
+    (window as any).__visitReceiptData = receiptData;
+    const receiptWindow = window.open('/reciept2.html', 'receipt2', 'width=900,height=900');
 
     if (!receiptWindow) {
       toast.error('Allow popups to print the receipt');
       return;
     }
-    receiptWindow.document.open();
-    receiptWindow.document.write(receipt);
-    receiptWindow.document.close();
+
     receiptWindow.focus();
-    // Do not auto-print — allow nurse to edit comments then use the Print button in the receipt window
     toast.success('Receipt ready — edit nurse comments then click PRINT RECEIPT');
   };
 
@@ -383,10 +400,16 @@ function StudentEntry() {
                   <option value="" disabled>
                     Select Year Level
                   </option>
-                  <option>First Year</option>
-                  <option>Second Year</option>
-                  <option>Third Year</option>
-                  <option>Fourth Year</option>
+                  <option>1st Year</option>
+                  <option>2nd Year</option>
+                  <option>3rd Year</option>
+                  <option>4th Year</option>
+                  <option>Grade 7</option>
+                  <option>Grade 8</option>
+                  <option>Grade 9</option>
+                  <option>Grade 10</option>
+                  <option>Grade 11</option>
+                  <option>Grade 12</option>
                 </select>
               </label>
               <label>
@@ -395,9 +418,13 @@ function StudentEntry() {
                   <option value="" disabled>
                     Select Program
                   </option>
-                  <option>BACHELOR OF SCIENCE IN ENTREPRENEURSHIP</option>
-                  <option>BTVTED</option>
-                  <option>BACHELOR OF EARLY CHILDHOOD EDUCATION</option>
+                  <option>CP</option>
+                  <option>STEM</option>
+                  <option>HUMSS</option>
+                  <option>ENTREP</option>
+                  <option>Computer Programming</option>
+                  <option>A</option>
+                  <option>B</option>
                 </select>
               </label>
             </div>

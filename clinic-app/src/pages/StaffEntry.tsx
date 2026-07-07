@@ -168,19 +168,35 @@ function StaffEntry() {
 
   const printReceipt = (visit: VisitRecord) => {
     const staff = findStaffByVisit(visit, staffList);
-    const receipt = buildReceiptHtml(visit, staff);
-    const receiptWindow = window.open('', '_blank', 'width=720,height=720');
+    const receiptData = {
+      receiptTitle: 'CLINIC VISIT RECEIPT',
+      patientHeading: '🧑 Staff Information',
+      idLabel: 'Staff ID:',
+      idValue: visit.idNumber || staff?.id || '-',
+      nameValue: visit.patientName || staff?.name || visit.name || 'Unknown Staff',
+      ageGenderValue: `${staff?.age || visit.age || '-'} Years Old / ${staff?.gender || visit.gender || '-'}`,
+      yearProgramValue: staff?.department || '-',
+      parentGuardianValue: staff?.position || '-',
+      contactNumberValue: staff?.contactNumber || '-',
+      visitDateValue: visit.visitDate || (visit.createdAt ? new Date(visit.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '-'),
+      visitTimeValue: visit.createdAt ? new Date(visit.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '-',
+      attendedByValue: 'Nurse',
+      reasonValue: visit.reasonForVisit || visit.concern || '-',
+      tempValue: visit.temperature ? `${visit.temperature} °C` : '-',
+      bpValue: visit.bloodPressure || '-',
+      medicineValue: visit.medicineGiven || '-',
+      remarksValue: visit.remarks || 'Patient advised to rest and stay hydrated.',
+    };
+
+    (window as any).__visitReceiptData = receiptData;
+    const receiptWindow = window.open('/reciept2.html', 'receipt2', 'width=900,height=900');
 
     if (!receiptWindow) {
       toast.error('Allow popups to print the receipt');
       return;
     }
 
-    receiptWindow.document.open();
-    receiptWindow.document.write(receipt);
-    receiptWindow.document.close();
     receiptWindow.focus();
-    // Do not auto-print — allow nurse to edit comments then use the Print button in the receipt window
     toast.success('Receipt ready — edit nurse comments then click PRINT RECEIPT');
   };
 
