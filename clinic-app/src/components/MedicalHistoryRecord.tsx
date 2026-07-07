@@ -38,16 +38,15 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
         </button>
       </header>
 
-      <article className="history-record-heading">
+      <article className="history-document-heading">
         <strong>{type.toUpperCase()} MEDICAL HISTORY RECORD</strong>
         <span>Official Clinic Medical Record</span>
       </article>
 
       <article className="history-profile-card">
-        <h2>
-          <ClipboardList size={22} aria-hidden="true" />
-          Personal Information
-        </h2>
+        <div className="history-card-header">
+          <strong>PERSONAL INFORMATION</strong>
+        </div>
         <div className="history-profile-grid">
           <Detail label={`${type} ID`} value={record.id} />
           <Detail label="Name" value={record.name} />
@@ -84,7 +83,9 @@ export default function MedicalHistoryRecord({ type, record, visits, onBack }: M
       </div>
 
       <article className="history-table-card">
-        <h2 className="history-section-title">Medical History</h2>
+        <div className="history-card-header history-card-header--small">
+          <strong>MEDICAL HISTORY</strong>
+        </div>
         <table className="history-record-table">
           <thead>
             <tr>
