@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Medical History Receipt</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial, Helvetica, sans-serif}
+body{background:#f4f6f8;padding:30px}
+.container{width:850px;margin:auto;background:#fff;border:1px solid #ccc;border-radius:8px;padding:35px}
+.header{display:flex;justify-content:center;align-items:center;gap:18px}
+.header img{width:80px;height:80px;object-fit:contain}
+.header-text h1{color:#14532d;font-size:30px}
+.header-text h3{color:#555;font-size:17px;font-weight:normal}
+.header-text p{color:#777;font-style:italic;font-size:14px}
+hr{border:none;border-top:2px dashed #666;margin:25px 0}
+.title{text-align:center;font-size:28px;color:#14532d;font-weight:bold}
+.subtitle{text-align:center;color:#666;margin-top:5px;margin-bottom:30px;font-style:italic}
+.section-title{background:#14532d;color:white;padding:10px 15px;border-radius:4px;margin-bottom:15px;font-weight:bold}
+.info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 40px;margin-bottom:30px}
+.info-grid div{padding:5px 0}
+table{width:100%;border-collapse:collapse;margin-bottom:40px}
+th{background:#14532d;color:white;padding:12px;font-size:15px}
+td{border:1px solid #ddd;padding:10px;text-align:center;font-size:14px}
+.bottom-section{display:flex;justify-content:space-between;align-items:flex-end;margin-top:50px}
+.date-printed{font-size:14px;color:#444}
+.signature{width:300px;text-align:center}
+.signature-line{border-top:1.5px solid #000;margin-bottom:8px}
+.signature p{font-weight:bold}
+.signature small{color:#666;font-size:12px}
+.footer{text-align:center;color:#777;font-size:13px;margin-top:25px}
+.button-row{display:flex;gap:12px;margin-top:18px;justify-content:center}
+.button{background:#14532d;color:#fff;border:none;padding:10px 18px;border-radius:8px;cursor:pointer}
+@media print{body{background:white;padding:0}.container{width:100%;border:none;box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <img id="logo" src="/images/logo.png" alt="School Logo" />
+    <div class="header-text">
+      <h1>SCHOOL CLINIC</h1>
+      <h3>Health Service Department</h3>
+      <p>"Your Health, Our Priority"</p>
+    </div>
+  </div>
+  <hr />
+  <div class="title" id="headerTitle">MEDICAL HISTORY RECORD</div>
+  <div class="subtitle" id="subtitle">Official Clinic Medical Record</div>
+  <div class="section-title">PERSONAL INFORMATION</div>
+  <div class="info-grid">
+    <div><strong id="idLabel">ID:</strong> <span id="idValue">-</span></div>
+    <div><strong>Name:</strong> <span id="nameValue">-</span></div>
+    <div><strong>Age:</strong> <span id="ageValue">-</span></div>
+    <div><strong>Gender:</strong> <span id="genderValue">-</span></div>
+    <div><strong id="field1Label">Field 1:</strong> <span id="field1Value">-</span></div>
+    <div><strong id="field2Label">Field 2:</strong> <span id="field2Value">-</span></div>
+    <div><strong id="field3Label">Field 3:</strong> <span id="field3Value">-</span></div>
+    <div><strong id="field4Label">Field 4:</strong> <span id="field4Value">-</span></div>
+    <div><strong>Current Concern:</strong> <span id="concernValue">-</span></div>
+    <div><strong>Current Status:</strong> <span id="statusValue">-</span></div>
+  </div>
+  <div class="section-title">MEDICAL HISTORY</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date & Time</th>
+        <th>Reason</th>
+        <th>Temperature</th>
+        <th>Blood Pressure</th>
+        <th>Medicine</th>
+        <th>Referred</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="historyRows">
+      <tr><td colspan="7" style="padding:16px;text-align:center;color:#666">Loading...</td></tr>
+    </tbody>
+  </table>
+  <div class="bottom-section">
+    <div class="date-printed"><strong>Date Printed:</strong><br /><span id="datePrinted">-</span></div>
+    <div class="signature">
+      <div class="signature-line"></div>
+      <p><strong>Authorized Clinic Personnel</strong></p>
+      <small>Signature over Printed Name</small>
+    </div>
+  </div>
+  <hr />
+  <div class="footer"><strong>This is a computer-generated Medical History Record.</strong><br /><br />School Clinic Management System</div>
+</div>
+<div class="button-row">
+  <button class="button" onclick="prepareAndPrint()">PRINT RECEIPT</button>
+  <button class="button" onclick="window.close()">BACK TO DASHBOARD</button>
+</div>
+<script>
+function text(value) { return value == null || value === '' ? '-' : value; }
+function renderRow(row) {
+  return `<tr><td>${text(row.dateTime)}</td><td>${text(row.reason)}</td><td>${text(row.temperature)}</td><td>${text(row.bloodPressure)}</td><td>${text(row.medicine)}</td><td>${text(row.referred)}</td><td>${text(row.status)}</td></tr>`;
+}
+function fillReceipt(data) {
+  document.getElementById('headerTitle').textContent = data.headerTitle;
+  document.getElementById('subtitle').textContent = data.subtitle;
+  document.getElementById('idLabel').textContent = data.idLabel + ':';
+  document.getElementById('idValue').textContent = data.idValue;
+  document.getElementById('nameValue').textContent = data.nameValue;
+  document.getElementById('ageValue').textContent = data.ageValue;
+  document.getElementById('genderValue').textContent = data.genderValue;
+  document.getElementById('field1Label').textContent = data.extraFields[0].label + ':';
+  document.getElementById('field1Value').textContent = data.extraFields[0].value;
+  document.getElementById('field2Label').textContent = data.extraFields[1].label + ':';
+  document.getElementById('field2Value').textContent = data.extraFields[1].value;
+  document.getElementById('field3Label').textContent = data.extraFields[2].label + ':';
+  document.getElementById('field3Value').textContent = data.extraFields[2].value;
+  if (data.extraFields[3]) {
+    document.getElementById('field4Label').textContent = data.extraFields[3].label + ':';
+    document.getElementById('field4Value').textContent = data.extraFields[3].value;
+  } else {
+    document.getElementById('field4Label').parentElement.style.display = 'none';
+  }
+  document.getElementById('concernValue').textContent = data.currentConcern;
+  document.getElementById('statusValue').textContent = data.status;
+  document.getElementById('historyRows').innerHTML = data.rows.length ? data.rows.map(renderRow).join('') : '<tr><td colspan="7" style="padding:16px;text-align:center;color:#666">No history available</td></tr>';
+  document.getElementById('datePrinted').textContent = data.datePrinted;
+}
+function prepareAndPrint(){window.focus();window.print();}
+window.addEventListener('DOMContentLoaded', function(){
+  const data = window.opener && window.opener.__medicalHistoryReceiptData;
+  if (data) {
+    fillReceipt(data);
+  } else {
+    document.getElementById('historyRows').innerHTML = '<tr><td colspan="7" style="padding:16px;text-align:center;color:#dc2626">Receipt data not available.</td></tr>';
+  }
+});
+</script>
+</body>
+</html>
