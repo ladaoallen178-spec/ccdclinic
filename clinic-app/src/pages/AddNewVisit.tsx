@@ -6,6 +6,31 @@ import type { VisitRecord, StaffRecord, StudentRecord } from '../utils/clinicDat
 import { createVisitRecord, createInventoryLog, loadStaff, loadStudents, loadVisits, saveStaffRecord, saveStudentRecord, loadInventory, updateInventoryStock } from '../services/clinicRecords';
 
 export default function AddNewVisit() {
+  const REASONS = [
+    'Eye Problem',
+    'Ear Problem',
+    'Nose Bleeding',
+    'Sinusitis/Acute Rhinitis',
+    'Sore Throat',
+    'Tonsillitis',
+    'Inflamed Gum',
+    'Toothache',
+    'Headache',
+    'Fever',
+    'Colds',
+    'Cough',
+    'Hyperacidity',
+    'Dysmenorrhea',
+    'Diarrhea',
+    'Abdominal Pain',
+    'Nausea & Vomiting',
+    'Fainting',
+    'Dizziness',
+    'Open Wound',
+    'Skin Rashes',
+    'Hyperventilation',
+    'Other',
+  ];
   const [visits, setVisits] = useState<VisitRecord[]>(getVisits);
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
   const [staffList, setStaffList] = useState<StaffRecord[]>(getStaff);
@@ -37,6 +62,10 @@ export default function AddNewVisit() {
     const medicineQuantity = Math.max(1, Number(form.get('medicineQuantity') || 1));
     const selectedInventoryItem = inventory.find((item) => item.id === selectedMedicineId);
     const medicineName = selectedInventoryItem?.name || '';
+    const rawReason = String(form.get('reasonForVisit') || '').trim();
+    const reasonDetails = String(form.get('reasonDetails') || '').trim();
+    const normalizedReason = rawReason && rawReason !== 'Other' ? rawReason : reasonDetails;
+
     const visit: VisitRecord = {
       patientType,
       idNumber,
@@ -44,7 +73,7 @@ export default function AddNewVisit() {
       temperature: String(form.get('temperature') || '').trim(),
       bloodPressure: String(form.get('bloodPressure') || '').trim(),
       referredToHospital,
-      reasonForVisit: String(form.get('reasonForVisit') || '').trim(),
+      reasonForVisit: normalizedReason,
       medicineGiven: String(form.get('medicineGiven') || '').trim(),
       status: 'Pending',
       createdAt: new Date().toISOString(),
@@ -267,8 +296,22 @@ export default function AddNewVisit() {
           </label>
 
           <label>
-              Reason for Visit
-            <textarea name="reasonForVisit" rows={4} placeholder="Describe symptoms, complaint, or reason" />
+            Reason for Visit
+            <select name="reasonForVisit" defaultValue="">
+              <option value="" disabled>
+                Select reason
+              </option>
+              {REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Additional details (optional)
+            <textarea name="reasonDetails" rows={3} placeholder="Provide additional details or specify if 'Other'" />
           </label>
 
           <div className="visit-form-grid">
