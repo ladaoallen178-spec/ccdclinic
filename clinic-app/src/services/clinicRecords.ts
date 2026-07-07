@@ -86,6 +86,8 @@ export async function loadStudents() {
 
 export async function saveStudentRecord(record: StudentRecord) {
   const existingStudent = getStudents().find((student) => student.id === record.id);
+  const trimmedYearLevel = record.yearLevel?.trim();
+
   const normalizedRecord: StudentRecord = {
     ...record,
     name: record.name?.trim() || existingStudent?.name || record.name || '',
@@ -94,7 +96,10 @@ export async function saveStudentRecord(record: StudentRecord) {
     status: record.status || existingStudent?.status || 'Cleared',
     age: record.age?.trim() || existingStudent?.age || record.age || '',
     gender: record.gender?.trim() || existingStudent?.gender || record.gender || '',
-    yearLevel: record.yearLevel?.trim() || existingStudent?.yearLevel || record.yearLevel || '',
+    yearLevel:
+      trimmedYearLevel !== undefined && trimmedYearLevel !== ''
+        ? trimmedYearLevel
+        : existingStudent?.yearLevel || '',
     program: record.program?.trim() || existingStudent?.program || record.program || '',
     parentName: record.parentName?.trim() || existingStudent?.parentName || record.parentName || '',
     parentPhone: record.parentPhone?.trim() || existingStudent?.parentPhone || record.parentPhone || '',
