@@ -4,17 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "cd clinic-app && npm install --ignore-scripts && npm run build",
-    "dev": "cd clinic-app && npm run dev",
-    "preview": "cd clinic-app && npm run preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "cd clinic-app && npm install && npm run build",
+    "preview": "vite preview",
+    "start": "echo 'Backend runs via Docker. This is a frontend-only package.'"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.107.0",
     "@vitejs/plugin-react": "^6.0.2",
     "lucide-react": "^1.17.0",
     "qrcode.react": "^4.2.0",

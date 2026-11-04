@@ -5,7 +5,6 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use tracing::{error, info};
 
 use crate::api::auth::AppState;
 
@@ -45,39 +44,28 @@ pub async fn create_student(
     Json(payload): Json<CreateStudentRequest>,
 ) -> Result<(StatusCode, Json<StudentRecord>), (StatusCode, String)> {
     let status = payload.status.unwrap_or_else(|| "Pending".to_string());
-    let id = payload.id.trim();
-    let name = payload.name.trim();
-
-    info!(student_id = %id, name = %name, status = %status, "Create student request received");
-
-    if id.is_empty() || name.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Student ID and name are required".to_string(),
-        ));
-    }
 
     let result = sqlx::query_as::<_, StudentRecord>(
         r#"
         INSERT INTO students (id, name, section, concern, status, age, gender, year_level, program, parent_name, parent_phone)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name,
-            section = EXCLUDED.section,
-            concern = EXCLUDED.concern,
-            status = EXCLUDED.status,
-            age = EXCLUDED.age,
-            gender = EXCLUDED.gender,
-            year_level = EXCLUDED.year_level,
-            program = EXCLUDED.program,
-            parent_name = EXCLUDED.parent_name,
-            parent_phone = EXCLUDED.parent_phone
+            name = COALESCE(EXCLUDED.name, students.name),
+            section = COALESCE(EXCLUDED.section, students.section),
+            concern = COALESCE(EXCLUDED.concern, students.concern),
+            status = COALESCE(EXCLUDED.status, students.status),
+            age = COALESCE(EXCLUDED.age, students.age),
+            gender = COALESCE(EXCLUDED.gender, students.gender),
+            year_level = COALESCE(EXCLUDED.year_level, students.year_level),
+            program = COALESCE(EXCLUDED.program, students.program),
+            parent_name = COALESCE(EXCLUDED.parent_name, students.parent_name),
+            parent_phone = COALESCE(EXCLUDED.parent_phone, students.parent_phone)
         RETURNING id, name, section, concern, status, age, gender, year_level, program, parent_name, parent_phone, 
                   to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZ') as created_at
         "#,
     )
-    .bind(id)
-    .bind(name)
+    .bind(&payload.id)
+    .bind(&payload.name)
     .bind(&payload.section)
     .bind(&payload.concern)
     .bind(&status)
@@ -89,12 +77,8 @@ pub async fn create_student(
     .bind(&payload.parent_phone)
     .fetch_one(&state.db)
     .await
-    .map_err(|e| {
-        error!(student_id = %id, error = ?e, "Create student insert failed");
-        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
-    })?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
-    info!(student_id = %result.id, "Create student insert completed");
     Ok((StatusCode::CREATED, Json(result)))
 }
 
@@ -145,12 +129,7 @@ pub async fn delete_student(
         .bind(&id)
         .execute(&state.db)
         .await
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Database error: {}", e),
-            )
-        })?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
 
     Ok(StatusCode::NO_CONTENT)
 }

@@ -1,38 +1,34 @@
 pub mod api;
+pub mod routes;
 pub mod db;
 pub mod limiters;
-pub mod routes;
 pub mod security;
 
 use axum::{
     extract::Extension,
     http::{Method, StatusCode},
     middleware,
-    response::{Html, IntoResponse},
+    response::{IntoResponse, Html},
     routing::get,
     Json, Router,
 };
 use serde_json::json;
 use std::{env, io::ErrorKind};
 
-use api::auth::AppState;
+use tower_http::{cors::{AllowOrigin, CorsLayer}, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use axum::http::header::CONTENT_TYPE;
 use axum::http::HeaderValue;
-use db::init_db_pool;
-use limiters::{enforce_concurrency, ConcurrencyLimiter};
+use std::path::PathBuf;
 use mime_guess;
+use db::init_db_pool;
 use routes::auth::auth_routes;
 use routes::bmi::bmi_routes;
-use routes::inventory::inventory_routes;
-use routes::inventory_logs::inventory_log_routes;
-use routes::medical_documents::medical_document_routes;
-use routes::staff::staff_routes;
 use routes::students::student_routes;
 use routes::visits::visit_routes;
-use std::path::PathBuf;
-use tower_http::{
-    cors::CorsLayer, services::ServeDir, set_header::SetResponseHeaderLayer, trace::TraceLayer,
-};
+use routes::inventory::inventory_routes;
+use api::auth::AppState;
+use limiters::{ConcurrencyLimiter, enforce_concurrency};
+
 
 #[tokio::main]
 async fn main() {
@@ -45,26 +41,32 @@ async fn main() {
     let port = env::var("PORT").unwrap_or_else(|_| "8000".to_string());
 
     let cors = {
-        let client_origins_list: Vec<&str> = client_origins
+        // Build a list of allowed origin patterns from CLIENT_URL (comma-separated)
+        let client_origins_list: Vec<String> = client_origins
             .split(',')
-            .map(str::trim)
+            .map(|s| s.trim().to_lowercase())
             .filter(|value| !value.is_empty())
             .collect();
 
+        // Always add development origins for local testing
+        let dev_origins: Vec<String> = vec![
+            "http://localhost:5173".to_string(),
+                "http://localhost:5174".to_string(),
+                "http://localhost:3000".to_string(),
+                "http://localhost:8080".to_string(),
+                "http://127.0.0.1:5173".to_string(),
+                "http://127.0.0.1:5174".to_string(),
+            ];
         // If no CLIENT_URL set (deployment issue), fall back to permissive with logging
         if client_origins_list.is_empty() {
             tracing::warn!("CLIENT_URL environment variable not set. CORS is permissive. This should only happen in development.");
             CorsLayer::permissive()
         } else {
-            let mut cors = CorsLayer::new()
-                .allow_methods([
-                    Method::GET,
-                    Method::POST,
-                    Method::PATCH,
-                    Method::PUT,
-                    Method::DELETE,
-                    Method::OPTIONS,
-                ])
+            let allowed = client_origins_list.clone();
+            let dev_allowed = dev_origins.clone();
+
+            let cors = CorsLayer::new()
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
                 .allow_headers([
                     axum::http::header::CONTENT_TYPE,
                     axum::http::header::AUTHORIZATION,
@@ -72,33 +74,41 @@ async fn main() {
                     axum::http::header::ACCEPT_LANGUAGE,
                     axum::http::header::ACCEPT_ENCODING,
                 ])
-                .allow_credentials(true);
+                .allow_credentials(true)
+                // Dynamic origin check: allow exact origins from CLIENT_URL, dev origins, and
+                // support Vercel preview domains (any subdomain ending with ".vercel.app") when
+                // a vercel.app entry exists in CLIENT_URL.
+                .allow_origin(AllowOrigin::predicate(move |origin: &HeaderValue, _req_head| {
+                    match origin.to_str() {
+                        Ok(origin_str) => {
+                            let origin_lower = origin_str.to_lowercase();
 
-            // Add all configured client origins
-            for origin in &client_origins_list {
-                cors = cors.allow_origin(HeaderValue::from_str(origin).unwrap_or_else(|e| {
-                    tracing::error!(origin = %origin, error = ?e, "Invalid CLIENT_URL origin");
-                    HeaderValue::from_static("http://localhost:5173")
+                            // Exact matches from CLIENT_URL
+                            if allowed.iter().any(|a| a == &origin_lower) {
+                                return true;
+                            }
+
+                            // Allow dev/local origins
+                            if dev_allowed.iter().any(|d| d == &origin_lower) {
+                                return true;
+                            }
+
+                            // If CLIENT_URL includes a pattern or host that contains "vercel.app",
+                            // allow any preview subdomain under vercel.app (useful for Vercel previews).
+                            if allowed.iter().any(|a| a.contains("vercel.app")) && origin_lower.ends_with(".vercel.app") {
+                                return true;
+                            }
+
+                            // Allow localhost origins if explicitly present in CLIENT_URL entries
+                            if allowed.iter().any(|a| a.starts_with("http://localhost") || a.starts_with("http://127.0.0.1")) && (origin_lower.starts_with("http://localhost") || origin_lower.starts_with("http://127.0.0.1")) {
+                                return true;
+                            }
+
+                            false
+                        }
+                        Err(_) => false,
+                    }
                 }));
-            }
-
-            // Add development origins for testing
-            #[cfg(debug_assertions)]
-            {
-                let dev_origins = vec![
-                    "http://localhost:5173",
-                    "http://localhost:3000",
-                    "http://localhost:8080",
-                    "http://127.0.0.1:5173",
-                ];
-
-                for origin in dev_origins {
-                    cors = cors.allow_origin(
-                        HeaderValue::from_str(origin)
-                            .unwrap_or_else(|_| HeaderValue::from_static("http://localhost:5173")),
-                    );
-                }
-            }
 
             cors
         }
@@ -121,12 +131,9 @@ async fn main() {
     let api = Router::new()
         .merge(auth_routes())
         .nest("/api/students", student_routes())
-        .nest("/api/staff", staff_routes())
         .nest("/api/visits", visit_routes())
         .nest("/api/inventory", inventory_routes())
-        .nest("/api/inventory-logs", inventory_log_routes())
-        .nest("/api/bmi-records", bmi_routes())
-        .nest("/api/medical-documents", medical_document_routes())
+        .nest("/api/bmi", bmi_routes())
         .layer(Extension(state))
         .layer(middleware::from_fn(move |req, next| {
             enforce_concurrency(limiter.clone(), req, next)
@@ -146,10 +153,7 @@ async fn main() {
         let full = std::path::Path::new(base).join(&path);
         if !full.exists() || !full.is_file() {
             let mut headers = HeaderMap::new();
-            headers.insert(
-                CONTENT_TYPE,
-                HeaderValue::from_static("text/plain; charset=utf-8"),
-            );
+            headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
             return (headers, b"Not found".to_vec());
         }
 
@@ -159,17 +163,13 @@ async fn main() {
                 let mut headers = HeaderMap::new();
                 headers.insert(
                     CONTENT_TYPE,
-                    HeaderValue::from_str(mime.as_ref())
-                        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
+                    HeaderValue::from_str(mime.as_ref()).unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
                 );
                 (headers, body)
             }
             Err(_) => {
                 let mut headers = HeaderMap::new();
-                headers.insert(
-                    CONTENT_TYPE,
-                    HeaderValue::from_static("text/plain; charset=utf-8"),
-                );
+                headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
                 (headers, b"Internal server error".to_vec())
             }
         }
@@ -243,10 +243,7 @@ fn load_env() {
 }
 
 async fn debug_users(Extension(state): Extension<AppState>) -> impl IntoResponse {
-    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
-        .fetch_one(&state.db)
-        .await
-    {
+    match sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users").fetch_one(&state.db).await {
         Ok(count) => Json(json!({
             "users_table_exists": true,
             "users_count": count,

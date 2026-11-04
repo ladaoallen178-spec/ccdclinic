@@ -1,18 +1,6 @@
--- School Clinic Database Schema (PostgreSQL / Supabase compatible)
--- This script sets up all tables, relationships, constraints, and indexes.
-
--- Enable UUID extension if not enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Clean drop of all tables if they exist to prevent schema conflicts
-DROP TABLE IF EXISTS visits CASCADE;
-DROP TABLE IF EXISTS inventory_logs CASCADE;
-DROP TABLE IF EXISTS bmi_records CASCADE;
-DROP TABLE IF EXISTS medical_documents CASCADE;
-DROP TABLE IF EXISTS students CASCADE;
-DROP TABLE IF EXISTS staff CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS inventory CASCADE;
+-- PostgreSQL / Supabase schema for the School Clinic application.
+-- Safe to apply repeatedly: it does not drop tables or insert demo credentials.
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- =========================================================================
 -- 1. USERS TABLE (For Clinic Staff Authentication)
@@ -26,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS contact_number VARCHAR(50);
 
 -- Index for fast user authentication checks
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -104,6 +94,10 @@ CREATE INDEX IF NOT EXISTS idx_visits_created_at ON visits(created_at);
 CREATE INDEX IF NOT EXISTS idx_visits_student_id ON visits(student_id) WHERE student_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_visits_staff_id ON visits(staff_id) WHERE staff_id IS NOT NULL;
 
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS patient_name VARCHAR(255);
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS visit_date TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+
 -- =========================================================================
 -- 5. INVENTORY TABLE (Medicines and Supplies)
 -- =========================================================================
@@ -181,52 +175,3 @@ CREATE INDEX IF NOT EXISTS idx_med_docs_created_at ON medical_documents(created_
 
 
 -- =========================================================================
--- MOCK DATA SEEDING (Optional - Run to populate tables for testing)
--- =========================================================================
-
--- Seed Students
-INSERT INTO students (id, name, section, concern, status, age, gender, year_level, program, parent_name, parent_phone) VALUES
-('S-1001', 'Juan Dela Cruz', 'Grade 10 - A', 'Headache', 'Pending', 16, 'Male', 'Grade 10', 'A', 'Jose Dela Cruz', '06123456748'),
-('S-1002', 'Ana Reyes', 'Grade 11 - STEM', 'Medical certificate', 'Pending', 17, 'Female', 'Grade 11', 'STEM', 'Liza Reyes', '06123456748'),
-('S-1003', 'Mark Villanueva', 'Grade 9 - B', 'Stomach pain', 'Cleared', 15, 'Male', 'Grade 9', 'B', 'Marites Villanueva', '06123456748'),
-('S-1004', 'Ella Cruz', 'Grade 12 - HUMSS', 'First aid follow-up', 'Pending', 18, 'Female', 'Grade 12', 'HUMSS', 'Ramon Cruz', '06123456748')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed Staff
-INSERT INTO staff (id, name, department, concern, status, age, gender, staff_type, position, contact_number, email) VALUES
-('T-2001', 'Maria Santos', 'Registrar', 'Blood pressure check', 'Cleared', 34, 'Female', 'Non-Teaching', 'Registrar Staff', '09345678901', 'maria.santos@ccd.edu'),
-('T-2002', 'Pedro Lim', 'Faculty', 'Medication request', 'Pending', 41, 'Male', 'Teacher', 'Teacher III', '09234567890', 'pedro.lim@ccd.edu'),
-('502', 'June Ann', 'OHS', 'Fever', 'Pending', 29, 'Female', 'Non-Teaching', 'Clinic Staff', '09195', 'june.ann@ccd.edu')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed Users (Pre-registered nurse: email 'nurse@ccd.edu', password 'password123')
--- Hash is generated using Argon2id standard, compatible with Rust backend
-INSERT INTO users (id, email, full_name, role, password_hash) VALUES
-('a59cf801-4475-4081-8178-0cb99bb6ee9e', 'nurse@ccd.edu', 'Clinic Nurse Admin', 'Nurse', '$argon2id$v=19$m=4096,t=3,p=1$c29tZXNhbHQ$5w4QpS2X+rL2x14P2aWn2aF1O/dM1N8bB9E/oU9l3V0')
-ON CONFLICT (email) DO NOTHING;
-
--- Seed Visits
-INSERT INTO visits (id, patient_type, student_id, staff_id, temperature, blood_pressure, referred_to_hospital, reason_for_visit, medicine_given, status, created_at) VALUES
-('1e48bc8f-889a-412e-9d2a-e8d1354bb881', 'Student', 'S-1001', NULL, '36.8', '110/70', FALSE, 'Headache', 'Paracetamol', 'Pending', CURRENT_TIMESTAMP - INTERVAL '2 hours'),
-('be83f81e-9271-4a30-bf88-e9cb654b9bf8', 'Staff', NULL, 'T-2001', '36.5', '130/80', FALSE, 'Blood pressure check', '', 'Completed', CURRENT_TIMESTAMP - INTERVAL '1 day')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed Inventory
-INSERT INTO inventory (id, name, dosage, stock, unit, status, expiry, supplier, location, remarks, keywords) VALUES
-('INV-1001', 'Paracetamol', '500mg', 12, 'tablet', 'Available', '2028-12-31', 'Mercury Drug', 'Cabinet A', 'For fever and headaches', ARRAY['paracetamol', 'biogesic', 'fever']),
-('INV-1002', 'Bandage Roll', '2 inch', 6, 'roll', 'Available', '2030-01-01', 'Watsons', 'Cabinet B', 'First aid dressing', ARRAY['bandage', 'dressing', 'wound']),
-('INV-1003', 'Alcohol', '70% Isopropyl', 3, 'bottle', 'Low Stock', '2027-06-30', 'Mercury Drug', 'Counter Desk', 'Sanitizer', ARRAY['alcohol', 'sanitizer', 'rubbing'])
-ON CONFLICT (name) DO NOTHING;
-
--- Seed Inventory Logs
-INSERT INTO inventory_logs (id, date_time, medicine, action, qty, student_id, student_name, staff_id, staff_name, performed_by, notes) VALUES
-('LOG-1001', CURRENT_TIMESTAMP - INTERVAL '1 day', 'Paracetamol', 'Medicine added to inventory', 12, NULL, NULL, NULL, NULL, 'Master Admin', 'Initial stock setup'),
-('LOG-1002', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'Paracetamol', 'Stock Dispensed', 1, 'S-1001', 'Juan Dela Cruz', NULL, NULL, 'Clinic Nurse Admin', 'Dispensed for headache during visit')
-ON CONFLICT (id) DO NOTHING;
-
--- Seed BMI Records
-INSERT INTO bmi_records (id, student_id, student_name, height, weight, bmi, status, created_at) VALUES
-('BMI-1001', 'S-1001', 'Juan Dela Cruz', 165.0, 58.5, 21.5, 'Normal', CURRENT_TIMESTAMP),
-('BMI-1002', 'S-1002', 'Ana Reyes', 155.0, 49.5, 20.6, 'Normal', CURRENT_TIMESTAMP - INTERVAL '1 day'),
-('BMI-1003', 'S-1003', 'Mark Villanueva', 164.0, 77.0, 28.6, 'Overweight', CURRENT_TIMESTAMP - INTERVAL '2 days')
-ON CONFLICT (id) DO NOTHING;

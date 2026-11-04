@@ -4,6 +4,8 @@
 // - In PROD: use the VITE_BACKEND_URL or fail with clear message
 const apiUrl = (import.meta.env.VITE_API_URL ?? '').trim();
 const backendUrl = (import.meta.env.VITE_BACKEND_URL ?? '').trim();
+const DEFAULT_DEV_API_URL = 'http://127.0.0.1:8000';
+const DEFAULT_PROD_API_URL = 'https://ccdclinic.onrender.com';
 
 let API_BASE_URLS: string[];
 
@@ -11,20 +13,18 @@ if (apiUrl) {
   // Explicit VITE_API_URL takes precedence
   API_BASE_URLS = [apiUrl];
 } else if (import.meta.env.DEV) {
-  // Development mode: use localhost backend
-  API_BASE_URLS = ['http://localhost:8000'];
+  // Development mode: use 127.0.0.1 to avoid localhost IPv6 routing issues.
+  API_BASE_URLS = [DEFAULT_DEV_API_URL];
 } else if (backendUrl) {
   // Production: use explicit backend URL if provided
   API_BASE_URLS = [backendUrl];
 } else {
-  // Fallback: This should not happen in production
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  // Production fallback when env vars are missing; do not call the current frontend origin.
   console.warn(
-    '[API] No VITE_API_URL or VITE_BACKEND_URL set. Falling back to current origin.',
-    'This will fail if frontend and backend are on different domains.',
-    { origin }
+    '[API] No VITE_API_URL or VITE_BACKEND_URL set. Falling back to default production backend URL.',
+    { defaultBackend: DEFAULT_PROD_API_URL }
   );
-  API_BASE_URLS = origin ? [origin] : [];
+  API_BASE_URLS = [DEFAULT_PROD_API_URL];
 }
 
 const APP_BASE_URL = import.meta.env.VITE_BASE ?? '';
@@ -128,24 +128,7 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
     throw new Error(message) as ApiError;
   }
 
-  const contentType = response.headers.get('content-type') || '';
-  const expectsJson = response.status !== 204;
-  const isJson = contentType.toLowerCase().includes('application/json');
-
-  if (response.ok && expectsJson && !isJson) {
-    const error = new Error(
-      `Expected JSON from API but received "${contentType || 'unknown content type'}". Check VITE_API_URL/VITE_BACKEND_URL.`,
-    ) as ApiError;
-    error.response = {
-      status: response.status,
-      data: {
-        error: error.message,
-      },
-    };
-    throw error;
-  }
-
-  const responseData = isJson ? await response.json().catch(() => ({})) : {};
+  const responseData = await response.json().catch(() => ({}));
 
   console.debug('[API] Response', {
     url: `${baseURL}${url}`,
@@ -185,7 +168,6 @@ const request = async <T>(method: string, url: string, data?: unknown): Promise<
 export default {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, data: unknown) => request<T>('POST', url, data),
-  patch: <T>(url: string, data?: unknown) => request<T>('PATCH', url, data),
   put: <T>(url: string, data: unknown) => request<T>('PUT', url, data),
   delete: <T>(url: string) => request<T>('DELETE', url),
 };

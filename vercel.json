@@ -5,8 +5,12 @@
   "outputDirectory": "clinic-app/dist",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "VITE_API_URL": "https://ccdclinic.onrender.com",
+    "VITE_BACKEND_URL": "https://ccdclinic.onrender.com"
+  }
 }
