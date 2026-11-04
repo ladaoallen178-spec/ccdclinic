@@ -17,8 +17,11 @@ Choose one of these options:
 1. Go to [supabase.com](https://supabase.com)
 2. Sign up or log in
 3. Create a new project
-4. Note your connection string from Project Settings → Database → Connection Pooling
-5. Copy the full connection string: `postgresql://postgres:YOUR_PASSWORD@YOUR_HOST.supabase.co:5432/postgres?sslmode=require`
+4. Open **Connect** and choose **Session pooler** (recommended for Render and IPv4 networks).
+5. Copy the full connection string shown by Supabase. It should have this shape:
+   `postgresql://postgres.<PROJECT_REF>:<URL_ENCODED_PASSWORD>@<POOLER_HOST>:5432/postgres?sslmode=require`
+
+   In this URL, `postgres.<PROJECT_REF>` is the username and `<POOLER_HOST>` is the exact hostname shown in Supabase. Do not guess or construct the pooler host from the region; it includes a cluster index. Replace only the password placeholder. If the password contains reserved URL characters, URL-encode it.
 
 #### Option B: Neon
 1. Go to [console.neon.tech](https://console.neon.tech)
@@ -50,7 +53,7 @@ Choose one of these options:
 
    | Key | Value | Notes |
    |-----|-------|-------|
-   | `DATABASE_URL` | `postgresql://postgres:YOUR_PASSWORD@YOUR_HOST.supabase.co:5432/postgres?sslmode=require` | Your database connection string (include ?sslmode=require) |
+   | `DATABASE_URL` | Copy the Supabase **Session pooler** URI | Keep the username, host, port, and database exactly as shown by Supabase |
    | `JWT_SECRET` | `<generate-random-32-char-hex>` | Run: `openssl rand -hex 32` to generate |
    | `CLIENT_URL` | `https://YOUR_VERCEL_URL` | Your Vercel frontend URL (e.g., https://ccdclinic.vercel.app) |
    | `RUST_LOG` | `info` | Optional logging level |
@@ -95,6 +98,14 @@ Choose one of these options:
 2. Check firewall/network rules in your database provider
 3. Verify the host and port in DATABASE_URL
 
+#### Error: `ENOTFOUND` or `tenant/user postgres.<project-ref> not found`
+This usually means the pooler username was entered as the hostname, or the wrong pooler endpoint was copied.
+
+1. In Supabase, open **Connect** and select **Session pooler**.
+2. Replace Render's `DATABASE_URL` with that complete connection URI. The username goes before `:` and the pooler host goes after `@`.
+3. Use the pooler hostname and port shown by Supabase; do not construct the host from the project reference.
+4. Save the environment variable and redeploy the Render service.
+
 #### Error: "Certificate error" or SSL issues
 **Fix**:
 1. Add `?sslmode=require` to your DATABASE_URL
@@ -104,11 +115,13 @@ Choose one of these options:
 
 #### Supabase Example
 ```
-DATABASE_URL=postgresql://postgres:abc123def456ghi@db.abc123def456.supabase.co:5432/postgres?sslmode=require
+DATABASE_URL=postgresql://postgres.abc123def456:URL_ENCODED_PASSWORD@aws-1-region.pooler.supabase.com:5432/postgres?sslmode=require
 JWT_SECRET=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
 CLIENT_URL=https://ccdclinic.vercel.app
 RUST_LOG=info
 ```
+
+The host above is illustrative only. Copy the complete URI from that project's **Connect → Session pooler** panel, then replace only its password placeholder. The exact host includes a pooler cluster index and cannot be inferred from the region.
 
 #### Neon Example
 ```

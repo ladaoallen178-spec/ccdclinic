@@ -32,10 +32,14 @@ services:
 # 1. DATABASE_URL (REQUIRED)
 #    Your PostgreSQL connection string
 #    
-#    Format: postgresql://username:password@host:port/database?sslmode=require
+#    Format: postgresql://username:URL_ENCODED_PASSWORD@host:port/database?sslmode=require
 #    
+#    For Supabase, copy Connect -> Session pooler. The username is usually
+#    postgres.<PROJECT_REF>; the hostname is the exact cluster host shown there.
+#    Do not guess the host from the region or use postgres.<PROJECT_REF> as host.
+#
 #    Examples:
-#    - Supabase: postgresql://postgres:YOUR_PASSWORD@db.YOUR_PROJECT.supabase.co:5432/postgres?sslmode=require
+#    - Supabase: postgresql://postgres.PROJECT_REF:URL_ENCODED_PASSWORD@aws-INDEX-REGION.pooler.supabase.com:5432/postgres?sslmode=require
 #    - Neon: postgresql://user:password@ep-XXXX.YOUR_REGION.neon.tech/dbname?sslmode=require
 #
 #    Steps to add:
