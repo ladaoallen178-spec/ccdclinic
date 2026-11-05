@@ -1616,6 +1616,17 @@ th {
   color: #667085;
 }
 
+.bmi-student-result .bmi-current-record {
+  max-width: 100%;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.bmi-student-result .bmi-current-record strong {
+  font-size: inherit;
+  color: #344054;
+}
+
 .bmi-empty-search {
   display: flex;
   align-items: center;

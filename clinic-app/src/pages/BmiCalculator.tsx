@@ -59,6 +59,12 @@ export default function BmiCalculator() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [bmiRecords, setBmiRecords] = useState<BmiRecord[]>(getBmiRecords);
   const [students, setStudents] = useState<StudentRecord[]>(getStudents);
+  const [isSavingBmi, setIsSavingBmi] = useState(false);
+
+  const selectedStudentBmi = useMemo(
+    () => bmiRecords.find((record) => record.studentId === selectedStudent?.id),
+    [bmiRecords, selectedStudent],
+  );
 
   useEffect(() => {
     loadStudents()
@@ -168,13 +174,14 @@ export default function BmiCalculator() {
       status: category,
       createdAt: new Date().toISOString(),
     };
+    setIsSavingBmi(true);
     try {
       const saved = await createBmiRecord(record);
       const nextRecords = [saved, ...bmiRecords.filter((item) => item.studentId !== saved.studentId)];
       setBmiRecords(nextRecords);
       setHeight('');
       setWeight('');
-      toast.success('BMI recorded');
+      toast.success(selectedStudentBmi ? 'BMI record updated' : 'BMI recorded');
     } catch (error: any) {
       console.error('[BmiCalculator] Failed to save BMI record:', error);
       const message =
@@ -182,6 +189,8 @@ export default function BmiCalculator() {
         error?.message ||
         'BMI record was not saved to the database.';
       toast.error(message);
+    } finally {
+      setIsSavingBmi(false);
     }
   };
 
@@ -325,9 +334,15 @@ export default function BmiCalculator() {
               <strong>{selectedStudent.name}</strong>
               <span>{selectedStudent.id}</span>
               <p>{selectedStudent.section || [selectedStudent.yearLevel, selectedStudent.program].filter(Boolean).join('/')}</p>
-              <button type="button" onClick={saveBmiRecord}>
+              {selectedStudentBmi ? (
+                <p className="bmi-current-record" role="status">
+                  Current BMI: <strong>{selectedStudentBmi.bmi.toFixed(2)} ({selectedStudentBmi.status})</strong>
+                  {' '}· Last updated {formatBmiDate(selectedStudentBmi.createdAt)}. Saving will replace this record.
+                </p>
+              ) : null}
+              <button type="button" onClick={saveBmiRecord} disabled={isSavingBmi}>
                 <Save size={17} aria-hidden="true" />
-                Record BMI in Student File
+                {isSavingBmi ? 'Saving...' : selectedStudentBmi ? 'Update BMI Record' : 'Record BMI in Student File'}
               </button>
             </div>
           ) : (
@@ -365,7 +380,7 @@ export default function BmiCalculator() {
           <ClipboardList size={24} aria-hidden="true" />
           Recent BMI Records
         </h2>
-        <p>Showing the most recent BMI measurements</p>
+        <p>One current BMI measurement per student. New measurements replace the previous record.</p>
         <table className="bmi-table">
           <thead>
             <tr>
@@ -396,6 +411,11 @@ export default function BmiCalculator() {
                 <td>{formatBmiDate(record.createdAt)}</td>
               </tr>
             ))}
+            {!recentRecords.length ? (
+              <tr>
+                <td colSpan={7}>No BMI records have been saved yet.</td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </article>

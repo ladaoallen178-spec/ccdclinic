@@ -331,13 +331,25 @@ export async function createInventoryLog(record: InventoryLog) {
 export async function loadBmiRecords() {
   try {
     const response = await api.get('/api/bmi');
-    const records = ((response.data || []) as any[]).map(transformApiBmiRecord);
+    const records = latestBmiRecords(((response.data || []) as any[]).map(transformApiBmiRecord));
     cacheRecords('clinic-bmi-records', records);
     return sortNewest(records);
   } catch (error) {
     console.warn('[loadBmiRecords] API error, falling back to localStorage:', error);
-    return sortNewest(getBmiRecords());
+    const records = latestBmiRecords(getBmiRecords());
+    saveBmiRecords(records);
+    return sortNewest(records);
   }
+}
+
+function latestBmiRecords(records: BmiRecord[]) {
+  const newestByStudent = new Map<string, BmiRecord>();
+  for (const record of sortNewest(records)) {
+    if (!newestByStudent.has(record.studentId)) {
+      newestByStudent.set(record.studentId, record);
+    }
+  }
+  return [...newestByStudent.values()];
 }
 
 export async function createBmiRecord(record: BmiRecord) {
