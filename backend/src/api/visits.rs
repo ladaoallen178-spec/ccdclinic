@@ -76,7 +76,7 @@ pub async fn create_visit(
         r#"
         INSERT INTO visits (id, patient_type, student_id, staff_id, patient_name, temperature, blood_pressure,
                            referred_to_hospital, reason_for_visit, medicine_given, status, visit_date)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, NOW()))
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12::timestamptz, NOW()))
         RETURNING id::text as id, patient_type, student_id, staff_id, patient_name, temperature, blood_pressure,
                   referred_to_hospital, reason_for_visit, medicine_given, status,
                   to_char(visit_date, 'YYYY-MM-DD"T"HH24:MI:SSTZ') as visit_date,
