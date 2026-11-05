@@ -36,6 +36,12 @@ Backend — Render
 3. Render will set the `PORT` environment variable for your service automatically — the backend reads `PORT` at runtime.
 4. Build & Deploy. Render will build the Docker image using your `backend/Dockerfile` and run the container.
 
+Database cleanup and nurse accounts
+--
+- Nurse registration must go through the deployed backend `/register` endpoint. It stores a password hash in `public.users`, which is also the table used by `/login`.
+- The old `public.accounts` table is not used by application code. If you want it removed, first review/export any data in Supabase, then run `backend/migrations/20261105_remove_legacy_accounts.sql` once in the Supabase SQL Editor. The statement does not use `CASCADE` and does not touch `public.users`.
+- Do not delete or rename `public.users`; nurse registration, login, and the registered-nurse list use it. If an old row has a malformed password hash, remove only that specific row in Supabase before registering that email again through the app.
+
 Notes and tips
 --
 - Do NOT store production secrets in the repo. Use the Vercel and Render dashboards to configure secret values.

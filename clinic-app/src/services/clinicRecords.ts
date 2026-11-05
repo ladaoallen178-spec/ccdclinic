@@ -63,6 +63,17 @@ type NurseRegistration = {
   contactNumber: string;
 };
 
+type NurseRegistrationResponse = {
+  user?: {
+    id?: string;
+    email?: string;
+    fullname?: string;
+    role?: string;
+    contact_number?: string;
+    created_at?: string;
+  };
+};
+
 const INVENTORY_LOG_KEY = 'clinic-inventory-log';
 
 // === STUDENTS ===
@@ -370,17 +381,46 @@ export async function deleteMedicalDocument(id: string) {
 }
 
 export async function loadNurses() {
-  return sortNewest(getNurses());
+  try {
+    const response = await api.get('/api/users');
+    const nurses = ((response.data || []) as any[]).map((user) => ({
+      id: user.id || '',
+      name: user.fullname || user.full_name || '',
+      email: user.email || '',
+      role: isNurseRole(user.role) ? user.role : 'Nurse',
+      contactNumber: user.contact_number || user.contactNumber || '',
+      createdAt: user.created_at || user.createdAt || new Date().toISOString(),
+    }));
+    saveNurses(nurses);
+    return sortNewest(nurses);
+  } catch (error) {
+    console.error('[loadNurses] API error:', error);
+    if (import.meta.env.DEV) return sortNewest(getNurses());
+    throw error;
+  }
 }
 
 export async function registerNurseAccount(registration: NurseRegistration) {
-  const nurse: NurseRecord = {
-    id: `NURSE-${Date.now()}`,
-    name: registration.name,
+  const response = await api.post<NurseRegistrationResponse>('/register', {
     email: registration.email,
+    password: registration.password,
+    full_name: registration.name,
     role: isNurseRole(registration.role) ? registration.role : 'Nurse',
-    contactNumber: registration.contactNumber,
-    createdAt: new Date().toISOString(),
+    contact_number: registration.contactNumber,
+  });
+  const user = response.data?.user;
+  if (!user?.id || !user?.email) {
+    throw new Error('Registration succeeded without returning a user record.');
+  }
+
+  const userRole = user.role || '';
+  const nurse: NurseRecord = {
+    id: user.id,
+    name: user.fullname || registration.name,
+    email: user.email,
+    role: isNurseRole(userRole) ? userRole : 'Nurse',
+    contactNumber: user.contact_number || registration.contactNumber,
+    createdAt: user.created_at || new Date().toISOString(),
   };
   saveNurses([nurse, ...getNurses()]);
   return nurse;
