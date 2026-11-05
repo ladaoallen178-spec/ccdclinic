@@ -245,6 +245,23 @@ async fn ensure_clinic_schema(pool: &PgPool) -> Result<(), sqlx::Error> {
 
     sqlx::query(
         r#"
+        DELETE FROM bmi_records older
+        USING bmi_records newer
+        WHERE older.student_id = newer.student_id
+          AND (older.created_at, older.id) < (newer.created_at, newer.id)
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_bmi_records_student_id_unique ON bmi_records(student_id)",
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        r#"
         CREATE TABLE IF NOT EXISTS medical_documents (
             id VARCHAR(50) PRIMARY KEY,
             student_id VARCHAR(50) NOT NULL REFERENCES students(id) ON DELETE CASCADE,

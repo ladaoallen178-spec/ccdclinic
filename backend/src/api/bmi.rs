@@ -48,6 +48,14 @@ pub async fn create_bmi_record(
         r#"
         INSERT INTO bmi_records (id, student_id, student_name, height, weight, bmi, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (student_id) DO UPDATE SET
+            id = EXCLUDED.id,
+            student_name = EXCLUDED.student_name,
+            height = EXCLUDED.height,
+            weight = EXCLUDED.weight,
+            bmi = EXCLUDED.bmi,
+            status = EXCLUDED.status,
+            created_at = NOW()
         RETURNING id, student_id, student_name, height::float8 as height, weight::float8 as weight,
                   bmi::float8 as bmi, status,
                   to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSTZ') as created_at
@@ -71,7 +79,7 @@ pub async fn create_bmi_record(
     })?;
 
     info!(bmi_id = %result.id, "Create BMI insert completed");
-    Ok((StatusCode::CREATED, Json(result)))
+    Ok((StatusCode::OK, Json(result)))
 }
 
 pub async fn get_bmi_records(

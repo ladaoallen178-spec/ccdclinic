@@ -354,7 +354,7 @@ export async function createBmiRecord(record: BmiRecord) {
   try {
     const response = await api.post('/api/bmi', payload);
     const saved = transformApiBmiRecord(response.data);
-    const nextRecords = [saved, ...getBmiRecords()];
+    const nextRecords = [saved, ...getBmiRecords().filter((item) => item.studentId !== saved.studentId)];
     saveBmiRecords(nextRecords);
     return saved;
   } catch (error) {

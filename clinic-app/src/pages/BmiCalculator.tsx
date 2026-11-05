@@ -170,7 +170,7 @@ export default function BmiCalculator() {
     };
     try {
       const saved = await createBmiRecord(record);
-      const nextRecords = [saved, ...bmiRecords];
+      const nextRecords = [saved, ...bmiRecords.filter((item) => item.studentId !== saved.studentId)];
       setBmiRecords(nextRecords);
       setHeight('');
       setWeight('');

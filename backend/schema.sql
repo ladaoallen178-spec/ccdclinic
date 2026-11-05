@@ -154,6 +154,13 @@ CREATE TABLE IF NOT EXISTS bmi_records (
 CREATE INDEX IF NOT EXISTS idx_bmi_student_id ON bmi_records(student_id);
 CREATE INDEX IF NOT EXISTS idx_bmi_created_at ON bmi_records(created_at);
 
+DELETE FROM bmi_records older
+USING bmi_records newer
+WHERE older.student_id = newer.student_id
+    AND (older.created_at, older.id) < (newer.created_at, newer.id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bmi_records_student_id_unique ON bmi_records(student_id);
+
 -- =========================================================================
 -- 8. MEDICAL DOCUMENTS TABLE (Student Medical Files Archive)
 -- =========================================================================
